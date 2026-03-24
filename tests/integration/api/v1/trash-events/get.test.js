@@ -24,8 +24,10 @@ describe("GET /api/v1/trash-events", () => {
 
       const responseBody = await response.json();
 
-      expect(Array.isArray(responseBody)).toBe(true);
-      expect(responseBody.length).toBeGreaterThan(0);
+      expect(Array.isArray(responseBody.events)).toBe(true);
+      expect(responseBody.events.length).toBeGreaterThan(0);
+      expect(typeof responseBody.total).toBe("number");
+      expect(responseBody.total).toBeGreaterThan(0);
     });
   });
 });

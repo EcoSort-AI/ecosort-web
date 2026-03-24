@@ -31,9 +31,17 @@ async function listEvents() {
   return results.rows;
 }
 
+async function countAll() {
+  const results = await database.query(
+    "SELECT count(*)::int FROM trash_detections;",
+  );
+  return results.rows[0].count;
+}
+
 const trashEvent = {
   create,
   listEvents,
+  countAll,
 };
 
 export default trashEvent;

@@ -18,7 +18,7 @@ function Home() {
     setIsListOpen(!isListOpen);
   };
 
-  const totalItems = data ? data.length : 0;
+  const totalItems = data ? data.total : 0;
 
   return (
     <div
@@ -143,13 +143,13 @@ function Home() {
                   Últimas Atividades
                 </h3>
 
-                {data.length === 0 ? (
+                {!data.events || data.events.length === 0 ? (
                   <p style={{ color: "#7f8c8d" }}>
                     Nenhum resíduo registado ainda.
                   </p>
                 ) : (
                   <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                    {data.map((item) => (
+                    {data.events.map((item) => (
                       <li
                         key={item.id}
                         style={{

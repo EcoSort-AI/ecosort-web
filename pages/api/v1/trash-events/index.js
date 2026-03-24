@@ -11,7 +11,12 @@ export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
   const events = await trashEvent.listEvents();
-  return response.status(200).json(events);
+  const totalCount = await trashEvent.countAll();
+
+  return response.status(200).json({
+    total: totalCount,
+    events: events,
+  });
 }
 
 async function postHandler(request, response) {

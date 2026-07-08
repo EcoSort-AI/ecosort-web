@@ -20,14 +20,72 @@ import {
   MapPin,
   Clock,
 } from "lucide-react";
+import {
+  GoogleMap,
+  useLoadScript,
+  Marker,
+  InfoWindow,
+} from "@react-google-maps/api";
 
 import rawTrashData from "../../data/trash_detections.json";
 
+// Configurações do Google Maps
+const mapContainerStyle = {
+  width: "100%",
+  height: "100%",
+};
+
+const center = {
+  lat: -23.6377,
+  lng: -46.577,
+};
+
+// O Segredo do visual Futurista/Clean está neste array de estilos!
+const mapOptions = {
+  disableDefaultUI: true, // Esconde os botões padrão do Google
+  zoomControl: true, // Mantém apenas o controle de zoom
+  styles: [
+    // Cor de fundo principal (terra) usando a mesma cor dos Cards
+    { elementType: "geometry", stylers: [{ color: "#1f1f1f" }] },
+    // Esconde TODOS os ícones de estabelecimentos, parques, hospitais, etc.
+    { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+    // Textos gerais com a cor das suas fontes secundárias
+    { elementType: "labels.text.fill", stylers: [{ color: "#9ca3af" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#1f1f1f" }] },
+    // Esconde totalmente a poluição de Pontos de Interesse e Transporte
+    { featureType: "poi", stylers: [{ visibility: "off" }] },
+    { featureType: "transit", stylers: [{ visibility: "off" }] },
+    // Estradas com cor de borda sutil para um efeito "wireframe" escuro
+    {
+      featureType: "road",
+      elementType: "geometry",
+      stylers: [{ color: "#374151" }],
+    },
+    {
+      featureType: "road",
+      elementType: "labels.text.fill",
+      stylers: [{ color: "#6b7280" }],
+    },
+    // Água num tom ainda mais escuro para dar contraste e profundidade
+    {
+      featureType: "water",
+      elementType: "geometry",
+      stylers: [{ color: "#111827" }],
+    },
+  ],
+};
+
 export default function AdminDashboard() {
   const [isMounted, setIsMounted] = useState(false);
+  const [selectedMapBin, setSelectedMapBin] = useState(null);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+  });
 
   const dashboardData = useMemo(() => {
     if (!rawTrashData || rawTrashData.length === 0) return null;
@@ -37,16 +95,66 @@ export default function AdminDashboard() {
     const categoryCounts = {};
     const dateCounts = {};
 
+    const binDetailedMetrics = {};
+
     rawTrashData.forEach((item) => {
       totalConfidence += item.confidence;
       binCounts[item.bin_id] = (binCounts[item.bin_id] || 0) + 1;
       categoryCounts[item.item_class] =
         (categoryCounts[item.item_class] || 0) + 1;
+
       const formattedDate = new Date(item.detected_at).toLocaleDateString(
         "en-US",
         { day: "2-digit", month: "2-digit" },
       );
       dateCounts[formattedDate] = (dateCounts[formattedDate] || 0) + 1;
+
+      if (!binDetailedMetrics[item.bin_id]) {
+        binDetailedMetrics[item.bin_id] = {
+          total: 0,
+          confidenceSum: 0,
+          categories: {},
+        };
+      }
+      binDetailedMetrics[item.bin_id].total++;
+      binDetailedMetrics[item.bin_id].confidenceSum += item.confidence;
+      binDetailedMetrics[item.bin_id].categories[item.item_class] =
+        (binDetailedMetrics[item.bin_id].categories[item.item_class] || 0) + 1;
+    });
+
+    const activeBinsWithMetrics = [
+      {
+        id: "smart_bin_01",
+        location: { lat: -23.6477, lng: -46.5742 },
+        local: "Instituto Mauá de Tecnologia",
+      },
+      {
+        id: "smart_bin_02",
+        location: { lat: -23.628, lng: -46.5802 },
+        local: "ParkShopping São Caetano",
+      },
+    ].map((bin) => {
+      const metrics = binDetailedMetrics[bin.id] || {
+        total: 0,
+        confidenceSum: 0,
+        categories: {},
+      };
+      const avgConf =
+        metrics.total > 0
+          ? ((metrics.confidenceSum / metrics.total) * 100).toFixed(1)
+          : "0.0";
+      const topCat =
+        Object.keys(metrics.categories).length > 0
+          ? Object.keys(metrics.categories).reduce((a, b) =>
+              metrics.categories[a] > metrics.categories[b] ? a : b,
+            )
+          : "Nenhum";
+      return {
+        ...bin,
+        totalDetections: metrics.total,
+        avgConfidence: avgConf,
+        topCategory: topCat,
+      };
     });
 
     return {
@@ -71,6 +179,7 @@ export default function AdminDashboard() {
       recentDetections: [...rawTrashData]
         .sort((a, b) => new Date(b.detected_at) - new Date(a.detected_at))
         .slice(0, 5),
+      activeBins: activeBinsWithMetrics,
     };
   }, []);
 
@@ -172,7 +281,7 @@ export default function AdminDashboard() {
               <BarChart
                 data={dashboardData.categories}
                 layout="vertical"
-                margin={{ top: 10, right: 30, bottom: 0 }}
+                margin={{ top: 10, right: 30, left: 20, bottom: 0 }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -210,17 +319,115 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Footer Info */}
+      {/* Footer Info (Mapa Operacional e Últimas Detecções) */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         <Card className="bg-[#1f1f1f] border-[#374151] text-white">
           <CardHeader>
-            <CardTitle>Localização</CardTitle>
+            <CardTitle>Localização Operacional</CardTitle>
           </CardHeader>
-          <CardContent className="h-[350px] flex items-center justify-center border-2 border-dashed border-[#374151] rounded-lg m-4">
-            <div className="text-center text-gray-400">
-              <MapPin className="h-10 w-10 mx-auto mb-2 opacity-50" />
-              <p>Mapa Interativo em Construção</p>
-            </div>
+          <CardContent className="h-[350px] relative pb-6 px-4">
+            {loadError && (
+              <div className="flex items-center justify-center h-full text-[#ef4444]">
+                Erro ao carregar o mapa.
+              </div>
+            )}
+            {!isLoaded && !loadError && (
+              <div className="flex items-center justify-center h-full text-gray-400">
+                Carregando mapa...
+              </div>
+            )}
+            {isLoaded && (
+              <div className="w-full h-full rounded-md overflow-hidden border border-[#374151]">
+                <GoogleMap
+                  mapContainerStyle={mapContainerStyle}
+                  zoom={13}
+                  center={center}
+                  onClick={() => setSelectedMapBin(null)}
+                  options={mapOptions}
+                >
+                  {dashboardData.activeBins.map((bin) => (
+                    <Marker
+                      key={bin.id}
+                      position={bin.location}
+                      onClick={() => setSelectedMapBin(bin)}
+                    />
+                  ))}
+
+                  {selectedMapBin && (
+                    <InfoWindow
+                      position={selectedMapBin.location}
+                      onCloseClick={() => setSelectedMapBin(null)}
+                    >
+                      <div
+                        style={{
+                          color: "#1f2937",
+                          padding: "4px",
+                          minWidth: "190px",
+                        }}
+                      >
+                        <h4
+                          style={{
+                            margin: "0 0 4px 0",
+                            fontSize: "1.1em",
+                            fontWeight: "bold",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {selectedMapBin.id}
+                        </h4>
+                        <p
+                          style={{
+                            margin: "0 0 8px 0",
+                            fontSize: "0.85em",
+                            color: "#4b5563",
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
+                          <MapPin size={12} style={{ marginRight: "4px" }} />{" "}
+                          {selectedMapBin.local}
+                        </p>
+                        <div
+                          style={{
+                            borderTop: "1px solid #e5e7eb",
+                            paddingTop: "6px",
+                            fontSize: "0.9em",
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "3px",
+                          }}
+                        >
+                          <p style={{ margin: 0 }}>
+                            <strong>Total Coletado:</strong>{" "}
+                            {selectedMapBin.totalDetections} itens
+                          </p>
+                          <p style={{ margin: 0 }}>
+                            <strong>Confiança:</strong>{" "}
+                            <span
+                              style={{ color: "#16a34a", fontWeight: "bold" }}
+                            >
+                              {selectedMapBin.avgConfidence}%
+                            </span>
+                          </p>
+                          <p style={{ margin: 0 }}>
+                            <strong>Principal:</strong>{" "}
+                            <span
+                              style={{
+                                textTransform: "capitalize",
+                                color: "#eab308",
+                                fontWeight: "bold",
+                              }}
+                            >
+                              {selectedMapBin.topCategory}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    </InfoWindow>
+                  )}
+                </GoogleMap>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -236,7 +443,7 @@ export default function AdminDashboard() {
                 hour: "2-digit",
                 minute: "2-digit",
               });
-              const dateString = dateObj.toLocaleDateString("pt-BR"); // dd/mm/yyyy
+              const dateString = dateObj.toLocaleDateString("pt-BR");
 
               return (
                 <div

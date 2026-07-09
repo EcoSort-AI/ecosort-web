@@ -1,4 +1,5 @@
 /* eslint-disable no-unused-vars */
+import useSWR from "swr";
 import React, { useState, useEffect, useMemo } from "react";
 import {
   AreaChart,
@@ -27,9 +28,9 @@ import {
   InfoWindow,
 } from "@react-google-maps/api";
 
-import rawTrashData from "../../data/trash_detections.json";
+const fetcher = (url) => fetch(url).then((res) => res.json());
 
-// Configurações do Google Maps
+// Google map configuration
 const mapContainerStyle = {
   width: "100%",
   height: "100%",
@@ -40,22 +41,16 @@ const center = {
   lng: -46.577,
 };
 
-// O Segredo do visual Futurista/Clean está neste array de estilos!
 const mapOptions = {
-  disableDefaultUI: true, // Esconde os botões padrão do Google
-  zoomControl: true, // Mantém apenas o controle de zoom
+  disableDefaultUI: true,
+  zoomControl: true,
   styles: [
-    // Cor de fundo principal (terra) usando a mesma cor dos Cards
     { elementType: "geometry", stylers: [{ color: "#1f1f1f" }] },
-    // Esconde TODOS os ícones de estabelecimentos, parques, hospitais, etc.
     { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-    // Textos gerais com a cor das suas fontes secundárias
     { elementType: "labels.text.fill", stylers: [{ color: "#9ca3af" }] },
     { elementType: "labels.text.stroke", stylers: [{ color: "#1f1f1f" }] },
-    // Esconde totalmente a poluição de Pontos de Interesse e Transporte
     { featureType: "poi", stylers: [{ visibility: "off" }] },
     { featureType: "transit", stylers: [{ visibility: "off" }] },
-    // Estradas com cor de borda sutil para um efeito "wireframe" escuro
     {
       featureType: "road",
       elementType: "geometry",
@@ -66,7 +61,6 @@ const mapOptions = {
       elementType: "labels.text.fill",
       stylers: [{ color: "#6b7280" }],
     },
-    // Água num tom ainda mais escuro para dar contraste e profundidade
     {
       featureType: "water",
       elementType: "geometry",
@@ -83,13 +77,18 @@ export default function AdminDashboard() {
     setIsMounted(true);
   }, []);
 
+  const { data: apiData, error } = useSWR("/api/v1/trash-events", fetcher, {
+    refreshInterval: 5000,
+  });
+
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
   });
 
   const dashboardData = useMemo(() => {
-    if (!rawTrashData || rawTrashData.length === 0) return null;
-    const totalDetections = rawTrashData.length;
+    const rawData = apiData?.events;
+    if (!rawData || rawData.length === 0) return null;
+    const totalDetections = rawData.length;
     let totalConfidence = 0;
     const binCounts = {};
     const categoryCounts = {};
@@ -97,7 +96,7 @@ export default function AdminDashboard() {
 
     const binDetailedMetrics = {};
 
-    rawTrashData.forEach((item) => {
+    rawData.forEach((item) => {
       totalConfidence += item.confidence;
       binCounts[item.bin_id] = (binCounts[item.bin_id] || 0) + 1;
       categoryCounts[item.item_class] =
@@ -176,16 +175,28 @@ export default function AdminDashboard() {
       categories: Object.keys(categoryCounts)
         .map((k) => ({ category: k, count: categoryCounts[k] }))
         .sort((a, b) => b.count - a.count),
-      recentDetections: [...rawTrashData]
+      recentDetections: [...rawData]
         .sort((a, b) => new Date(b.detected_at) - new Date(a.detected_at))
         .slice(0, 5),
       activeBins: activeBinsWithMetrics,
     };
-  }, []);
+  }, [apiData]);
 
   if (!isMounted) return null;
+
+  if (error)
+    return (
+      <div className="p-8 text-[#ef4444] min-h-screen bg-[#242424]">
+        Erro ao carregar dados da API. Verifique a conexão com o banco de dados.
+      </div>
+    );
+
   if (!dashboardData)
-    return <div className="p-8 text-white">Loading dashboard data...</div>;
+    return (
+      <div className="p-8 text-gray-400 min-h-screen bg-[#242424]">
+        Carregando telemetria em tempo real...
+      </div>
+    );
 
   return (
     <div
@@ -319,7 +330,7 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Footer Info (Mapa Operacional e Últimas Detecções) */}
+      {/* Footer Info */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
         <Card className="bg-[#1f1f1f] border-[#374151] text-white">
           <CardHeader>

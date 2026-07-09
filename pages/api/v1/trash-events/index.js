@@ -12,7 +12,11 @@ router.post(postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  const events = await trashEvent.listEvents();
+  const limit = request.query.limit
+    ? parseInt(request.query.limit, 10)
+    : undefined;
+
+  const events = await trashEvent.listEvents({ limit });
   const totalCount = await trashEvent.countAll();
 
   return response.status(200).json({

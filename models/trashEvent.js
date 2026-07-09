@@ -24,9 +24,17 @@ async function create(eventData) {
   }
 }
 
-async function listEvents() {
+async function listEvents({ limit } = {}) {
+  if (limit) {
+    const results = await database.query({
+      text: "SELECT * FROM trash_detections ORDER BY detected_at DESC LIMIT $1;",
+      values: [limit],
+    });
+    return results.rows;
+  }
+
   const results = await database.query(
-    "SELECT * FROM trash_detections ORDER BY detected_at DESC LIMIT 10;",
+    "SELECT * FROM trash_detections ORDER BY detected_at DESC;",
   );
   return results.rows;
 }

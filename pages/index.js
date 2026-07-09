@@ -45,7 +45,7 @@ const activeBins = [
 function Home() {
   const [selectedBin, setSelectedBin] = useState(null);
 
-  const { data, error } = useSWR("/api/v1/trash-events", fetcher, {
+  const { data, error } = useSWR("/api/v1/trash-events?limit=1", fetcher, {
     refreshInterval: 2000,
   });
 

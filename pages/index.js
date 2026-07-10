@@ -1,25 +1,59 @@
 /* eslint-disable no-unused-vars */
 import useSWR from "swr";
 import { useState } from "react";
-import { FiChevronDown, FiChevronUp } from "react-icons/fi";
-import { motion, AnimatePresence } from "framer-motion";
 import Head from "next/head";
 import Image from "next/image";
 
+import {
+  GoogleMap,
+  useLoadScript,
+  Marker,
+  InfoWindow,
+} from "@react-google-maps/api";
+import { MapPin } from "lucide-react";
+
 const fetcher = (url) => fetch(url).then((response) => response.json());
 
-function Home() {
-  const [isListOpen, setIsListOpen] = useState(false);
+// Map configuration
+const mapContainerStyle = {
+  width: "100%",
+  height: "400px",
+  borderRadius: "16px",
+};
 
-  const { data, error } = useSWR("/api/v1/trash-events", fetcher, {
+// adjust to centralize between the two smart-bins
+const center = {
+  lat: -23.6377,
+  lng: -46.577,
+};
+
+const activeBins = [
+  {
+    id: "smart_bin_01",
+    location: { lat: -23.6477, lng: -46.5742 },
+    status: "Disponível",
+    local: "Instituto Mauá de Tecnologia",
+  },
+  {
+    id: "smart_bin_02",
+    location: { lat: -23.626, lng: -46.5802 },
+    status: "Disponível",
+    local: "ParkShopping São Caetano",
+  },
+];
+
+function Home() {
+  const [selectedBin, setSelectedBin] = useState(null);
+
+  const { data, error } = useSWR("/api/v1/trash-events?limit=1", fetcher, {
     refreshInterval: 2000,
   });
 
-  const toggleList = () => {
-    setIsListOpen(!isListOpen);
-  };
-
   const totalItems = data ? data.total : 0;
+
+  const { isLoaded, loadError } = useLoadScript({
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+  });
 
   return (
     <div
@@ -33,15 +67,11 @@ function Home() {
       <Head>
         <title>EcoSort - A Lixeira Inteligente</title>
         <style>{`
-          body {
-            margin: 0;
-            padding: 0;
-            background-color: #242424;
-          }
+          body { margin: 0; padding: 0; background-color: #242424; }
         `}</style>
       </Head>
 
-      {/* Cabeçalho */}
+      {/* Header */}
       <header
         style={{
           display: "flex",
@@ -50,7 +80,14 @@ function Home() {
           padding: "20px 40px",
         }}
       >
-        <h1 style={{ color: "#16a34a", fontSize: "1.5em", margin: 0 }}>
+        <h1
+          style={{
+            color: "#16a34a",
+            fontSize: "1.5em",
+            margin: 0,
+            fontWeight: "bold",
+          }}
+        >
           EcoSort AI
         </h1>
         <a
@@ -68,24 +105,24 @@ function Home() {
       <main
         style={{ maxWidth: "1100px", margin: "0 auto", padding: "40px 20px" }}
       >
-        {/* Secção Superior (Apresentação) */}
+        {/* Upper Section */}
         <section
           style={{
             display: "flex",
             flexWrap: "wrap",
             alignItems: "center",
             gap: "40px",
-            marginBottom: "60px",
+            marginBottom: "180px",
           }}
         >
-          {/* Lado Esquerdo: Textos */}
-          <div style={{ flex: "1 1 400px" }}>
+          <div style={{ flex: "1 1 500px" }}>
             <h2
               style={{
                 fontSize: "3em",
                 color: "#ffffff",
                 margin: "0 0 20px 0",
                 lineHeight: "1.2",
+                fontWeight: "bold",
               }}
             >
               Lixeira inteligente com <br />
@@ -97,6 +134,7 @@ function Home() {
                 color: "#d1d5db",
                 lineHeight: "1.6",
                 marginBottom: "30px",
+                maxWidth: "440px",
               }}
             >
               Utilizando Inteligência Artificial e Visão Computacional para
@@ -118,7 +156,6 @@ function Home() {
             </button>
           </div>
 
-          {/* Lado Direito: Imagem da Lixeira */}
           <div
             style={{
               flex: "1 1 400px",
@@ -142,204 +179,202 @@ function Home() {
           </div>
         </section>
 
-        {/* Secção Inferior (Dashboard Escuro IA) */}
+        {/* Card Counter */}
         <section
           style={{
-            backgroundColor: "rgba(0, 0, 0, 0.4)",
-            borderRadius: "30px",
-            padding: "50px",
+            display: "flex",
+            justifyContent: "center",
+            marginBottom: "180px",
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: "rgba(0, 0, 0, 0.4)",
+              padding: "40px 60px",
+              borderRadius: "24px",
+              border: "1px solid #374151",
+              textAlign: "center",
+              boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+            }}
+          >
+            <p
+              style={{
+                margin: 0,
+                fontSize: "1.1em",
+                color: "#9ca3af",
+                textTransform: "uppercase",
+                letterSpacing: "2px",
+                fontWeight: "bold",
+              }}
+            >
+              Total de Itens Classificados
+            </p>
+            <p
+              style={{
+                margin: "15px 0 0 0",
+                fontSize: "4.5em",
+                fontWeight: "900",
+                color: "#eab308",
+                lineHeight: "1",
+              }}
+            >
+              {!data && !error ? "..." : totalItems}
+            </p>
+          </div>
+        </section>
+
+        {/* Public Map Section */}
+        <section
+          style={{
+            backgroundColor: "rgba(0, 0, 0, 0.3)",
+            borderRadius: "24px",
+            padding: "40px",
             border: "1px solid rgba(255, 255, 255, 0.05)",
           }}
         >
-          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+          <div style={{ textAlign: "center", marginBottom: "30px" }}>
             <h3
               style={{
                 fontSize: "2.2em",
                 color: "#ffffff",
                 margin: "0 0 10px 0",
+                fontWeight: "bold",
               }}
             >
-              Monitoramento em Tempo Real
+              Encontre uma lixeira EcoSort perto de você
             </h3>
             <p style={{ color: "#9ca3af", margin: 0 }}>
-              Acompanhe as classificações da rede YOLO diretamente do
-              microcontrolador.
+              Nossos pontos de coleta inteligente estão disponíveis nas
+              seguintes localizações.
             </p>
           </div>
 
-          {/* Container do Odómetro/Lista */}
           <div
             style={{
-              maxWidth: "600px",
-              margin: "0 auto",
-              backgroundColor: "rgba(0, 0, 0, 0.5)",
-              border: "1px solid #374151",
-              borderRadius: "20px",
+              border: "2px solid #374151",
+              borderRadius: "18px",
               overflow: "hidden",
             }}
           >
-            <div
-              onClick={toggleList}
-              style={{
-                cursor: "pointer",
-                padding: "40px",
-                textAlign: "center",
-                backgroundColor: isListOpen
-                  ? "rgba(31, 41, 55, 0.8)"
-                  : "transparent",
-                transition: "background-color 0.3s ease",
-              }}
-            >
-              <p
+            {loadError && (
+              <div
                 style={{
-                  margin: 0,
-                  fontSize: "0.9em",
+                  padding: "40px",
+                  textAlign: "center",
+                  color: "#ef4444",
+                }}
+              >
+                Erro ao carregar o mapa.
+              </div>
+            )}
+            {!isLoaded && !loadError && (
+              <div
+                style={{
+                  padding: "80px",
+                  textAlign: "center",
                   color: "#9ca3af",
-                  textTransform: "uppercase",
-                  letterSpacing: "2px",
-                  fontWeight: "bold",
                 }}
               >
-                Total de Itens Escaneados
-              </p>
-
-              <p
-                style={{
-                  margin: "20px 0",
-                  fontSize: "5em",
-                  fontWeight: "900",
-                  color: "#eab308",
+                Carregando mapa...
+              </div>
+            )}
+            {isLoaded && (
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                zoom={14}
+                center={center}
+                onClick={() => setSelectedBin(null)}
+                options={{
+                  styles: [
+                    {
+                      elementType: "geometry",
+                      stylers: [{ color: "#242f3e" }],
+                    },
+                    {
+                      elementType: "labels.text.stroke",
+                      stylers: [{ color: "#242f3e" }],
+                    },
+                    {
+                      elementType: "labels.text.fill",
+                      stylers: [{ color: "#746855" }],
+                    },
+                    {
+                      featureType: "road",
+                      elementType: "geometry",
+                      stylers: [{ color: "#38414e" }],
+                    },
+                    {
+                      featureType: "water",
+                      elementType: "geometry",
+                      stylers: [{ color: "#17263c" }],
+                    },
+                  ],
+                  disableDefaultUI: true,
+                  zoomControl: true,
                 }}
               >
-                {!data && !error ? "..." : totalItems}
-              </p>
+                {activeBins.map((bin) => (
+                  <Marker
+                    key={bin.id}
+                    position={bin.location}
+                    onClick={() => setSelectedBin(bin)}
+                  />
+                ))}
 
-              <small
-                style={{
-                  color: "#9ca3af",
-                  fontWeight: "bold",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "8px",
-                }}
-              >
-                {isListOpen ? (
-                  <>
-                    <FiChevronUp size={20} /> Ocultar últimos registos
-                  </>
-                ) : (
-                  <>
-                    <FiChevronDown size={20} /> Ver últimos registos
-                  </>
-                )}
-              </small>
-            </div>
-
-            <AnimatePresence>
-              {isListOpen && data && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.3, ease: "easeInOut" }}
-                >
-                  <div
-                    style={{
-                      padding: "0 40px 40px 40px",
-                      borderTop: "1px solid #374151",
-                    }}
+                {/* Info on click */}
+                {selectedBin && (
+                  <InfoWindow
+                    position={selectedBin.location}
+                    onCloseClick={() => setSelectedBin(null)}
                   >
-                    <h4
-                      style={{
-                        color: "#ffffff",
-                        marginTop: "30px",
-                        marginBottom: "20px",
-                        fontSize: "1.2em",
-                      }}
-                    >
-                      Últimas Classificações
-                    </h4>
-
-                    {!data.events || data.events.length === 0 ? (
-                      <p style={{ color: "#6b7280", textAlign: "center" }}>
-                        Nenhum resíduo registado ainda.
+                    <div style={{ color: "#1f2937", padding: "4px" }}>
+                      <h4
+                        style={{
+                          margin: "0 0 4px 0",
+                          fontSize: "1.1em",
+                          fontWeight: "bold",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {selectedBin.id}
+                      </h4>
+                      <p
+                        style={{
+                          margin: "0 0 6px 0",
+                          fontSize: "0.9em",
+                          color: "#4b5563",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <MapPin size={14} style={{ marginRight: "5px" }} />{" "}
+                        {selectedBin.local}
                       </p>
-                    ) : (
-                      <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                        {data.events.map((item) => (
-                          <li
-                            key={item.id}
-                            style={{
-                              padding: "15px",
-                              borderBottom: "1px solid #374151",
-                              display: "flex",
-                              justifyContent: "space-between",
-                              alignItems: "center",
-                              backgroundColor: "rgba(31, 41, 55, 0.3)",
-                              borderRadius: "10px",
-                              marginBottom: "10px",
-                            }}
-                          >
-                            <div>
-                              <strong
-                                style={{
-                                  fontSize: "1.1em",
-                                  color: "#f3f4f6",
-                                  textTransform: "capitalize",
-                                  display: "block",
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                {item.item_class}
-                              </strong>
-                              <span
-                                style={{ fontSize: "0.85em", color: "#9ca3af" }}
-                              >
-                                Lixeira: {item.bin_id}
-                              </span>
-                            </div>
-                            <div style={{ textAlign: "right" }}>
-                              <span
-                                style={{
-                                  color: "#eab308",
-                                  fontWeight: "bold",
-                                  fontSize: "1.1em",
-                                  display: "block",
-                                  marginBottom: "4px",
-                                }}
-                              >
-                                {(item.confidence * 100).toFixed(1)}%
-                              </span>
-                              <span
-                                style={{ fontSize: "0.85em", color: "#9ca3af" }}
-                              >
-                                {new Date(item.detected_at).toLocaleTimeString(
-                                  "pt-BR",
-                                )}
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "0.95em",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Status:{" "}
+                        <span
+                          style={{
+                            color:
+                              selectedBin.status === "Disponível"
+                                ? "#16a34a"
+                                : "#eab308",
+                          }}
+                        >
+                          {selectedBin.status}
+                        </span>
+                      </p>
+                    </div>
+                  </InfoWindow>
+                )}
+              </GoogleMap>
+            )}
           </div>
-
-          {error && (
-            <p
-              style={{
-                color: "#ef4444",
-                textAlign: "center",
-                marginTop: "20px",
-              }}
-            >
-              Falha ao carregar os dados do microcontrolador.
-            </p>
-          )}
         </section>
       </main>
     </div>

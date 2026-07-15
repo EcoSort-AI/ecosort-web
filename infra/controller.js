@@ -16,11 +16,14 @@ function onNoMatchHandler(request, response) {
 
 function onErrorHandler(error, request, response) {
   if (
-    error instanceof ServiceError ||
     error instanceof ValidationError ||
     error instanceof NotFoundError ||
-    error instanceof UnauthorizedError
+    error instanceof ServiceError
   ) {
+    return response.status(error.statusCode).json(error);
+  }
+  if (error instanceof UnauthorizedError) {
+    clearSessionCookie(response);
     return response.status(error.statusCode).json(error);
   }
 

@@ -28,7 +28,7 @@ describe("DELETE /api/v1/sessions", () => {
 
       expect(responseBody).toEqual({
         name: "UnauthorizedError",
-        message: "Usuário não possui sessão ativa",
+        message: "Usuário não possui sessão ativa.",
         action: "Verifique se este usuário está logado e tente novamente.",
         status_code: 401,
       });
@@ -58,7 +58,7 @@ describe("DELETE /api/v1/sessions", () => {
 
       expect(responseBody).toEqual({
         name: "UnauthorizedError",
-        message: "Usuário não possui sessão ativa",
+        message: "Usuário não possui sessão ativa.",
         action: "Verifique se este usuário está logado e tente novamente.",
         status_code: 401,
       });
@@ -129,7 +129,7 @@ describe("DELETE /api/v1/sessions", () => {
       const doubleCheckResponseBody = await doubleCheckResponse.json();
       expect(doubleCheckResponseBody).toEqual({
         name: "UnauthorizedError",
-        message: "Usuário não possui sessão ativa",
+        message: "Usuário não possui sessão ativa.",
         action: "Verifique se este usuário está logado e tente novamente.",
         status_code: 401,
       });

@@ -10,6 +10,10 @@ beforeAll(async () => {
 describe("GET /api/v1/trash-events", () => {
   describe("Anonymous user", () => {
     test("Retrieving latest detections", async () => {
+      const user = await orchestrator.createUser({});
+      await orchestrator.addFeaturesToUser(user, ["read:trash_events"]);
+      const session = await orchestrator.createSession(user.id);
+
       const payload = {
         bin_id: "smart_bin_01",
         timestamp: "2026-03-19T16:00:00.000Z",
@@ -19,7 +23,15 @@ describe("GET /api/v1/trash-events", () => {
         },
       };
       await trashEvent.create(payload);
-      const response = await fetch("http://localhost:3000/api/v1/trash-events");
+      const response = await fetch(
+        "http://localhost:3000/api/v1/trash-events",
+        {
+          headers: {
+            cookie: `session_id=${session.token}`,
+          },
+        },
+      );
+
       expect(response.status).toBe(200);
 
       const responseBody = await response.json();

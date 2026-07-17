@@ -3,6 +3,7 @@ import useSWR from "swr";
 import { useState } from "react";
 import Head from "next/head";
 import Image from "next/image";
+import Link from "next/link";
 
 import {
   GoogleMap,
@@ -94,16 +95,25 @@ function Home() {
         >
           EcoSort AI
         </h1>
-        <a
-          href="#"
+
+        {/* Botão da Área do Administrador */}
+        <Link
+          href="/login"
           style={{
-            color: "#ffffff",
+            backgroundColor: "rgba(22, 163, 74, 0.1)",
+            color: "#16a34a",
+            border: "1px solid #16a34a",
+            padding: "8px 20px",
+            fontSize: "0.95em",
+            borderRadius: "8px",
             textDecoration: "none",
             fontWeight: "bold",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
           }}
         >
-          Sobre o Projeto
-        </a>
+          Área do Administrador
+        </Link>
       </header>
 
       <main

@@ -45,9 +45,13 @@ const activeBins = [
 function Home() {
   const [selectedBin, setSelectedBin] = useState(null);
 
-  const { data, error } = useSWR("/api/v1/trash-events?limit=1", fetcher, {
-    refreshInterval: 2000,
-  });
+  const { data, error } = useSWR(
+    "/api/v1/trash-events/count?limit=1",
+    fetcher,
+    {
+      refreshInterval: 2000,
+    },
+  );
 
   const totalItems = data ? data.total : 0;
 

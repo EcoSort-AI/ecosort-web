@@ -1,4 +1,7 @@
 /* eslint-disable no-unused-vars */
+import session from "models/session.js";
+import user from "models/user.js";
+import authorization from "models/authorization.js";
 import useSWR from "swr";
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -86,14 +89,47 @@ export default function AdminDashboard() {
   });
 
   const dashboardData = useMemo(() => {
-    const rawData = apiData?.events;
-    if (!rawData || rawData.length === 0) return null;
+    if (!apiData) return null;
+
+    const rawData = Array.isArray(apiData) ? apiData : apiData.events || [];
+
+    if (rawData.length === 0) {
+      return {
+        kpis: {
+          totalDetections: 0,
+          averageConfidence: "0.0",
+          mostActiveBin: "Nenhuma",
+          topCategory: "Nenhum",
+        },
+        volumeOverTime: [],
+        categories: [],
+        recentDetections: [],
+        activeBins: [
+          {
+            id: "smart_bin_01",
+            location: { lat: -23.6477, lng: -46.5742 },
+            local: "Instituto Mauá de Tecnologia",
+            totalDetections: 0,
+            avgConfidence: "0.0",
+            topCategory: "Nenhum",
+          },
+          {
+            id: "smart_bin_02",
+            location: { lat: -23.628, lng: -46.5802 },
+            local: "ParkShopping São Caetano",
+            totalDetections: 0,
+            avgConfidence: "0.0",
+            topCategory: "Nenhum",
+          },
+        ],
+      };
+    }
+
     const totalDetections = rawData.length;
     let totalConfidence = 0;
     const binCounts = {};
     const categoryCounts = {};
     const dateCounts = {};
-
     const binDetailedMetrics = {};
 
     rawData.forEach((item) => {
@@ -490,4 +526,33 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
+}
+
+export async function getServerSideProps(context) {
+  const sessionToken = context.req.cookies.session_id;
+
+  if (!sessionToken) {
+    return {
+      redirect: { destination: "/login", permanent: false },
+    };
+  }
+
+  try {
+    const sessionObject = await session.findOneValidByToken(sessionToken);
+    const userObject = await user.findOneById(sessionObject.user_id);
+
+    if (!authorization.can(userObject, "read:dashboard")) {
+      return {
+        redirect: { destination: "/", permanent: false },
+      };
+    }
+
+    return {
+      props: {},
+    };
+  } catch (error) {
+    return {
+      redirect: { destination: "/login", permanent: false },
+    };
+  }
 }

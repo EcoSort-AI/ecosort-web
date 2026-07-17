@@ -22,6 +22,13 @@ const availableFeatures = [
   // STATUS
   "read:status",
   "read:status:all",
+
+  // DASHBOARD / ADMIN
+  "read:dashboard",
+  "read:trash_events",
+
+  // INVITATION
+  "create:invitation",
 ];
 
 function can(user, feature, resource) {

@@ -25,7 +25,7 @@ async function findOneValidById(tokenId) {
          AND used_at IS NULL
        LIMIT
          1
-     ;`,
+      ;`,
       values: [tokenId],
     });
 
@@ -33,7 +33,7 @@ async function findOneValidById(tokenId) {
       throw new NotFoundError({
         message:
           "O token de ativação utilizado não foi encontrado no sistema ou expirou.",
-        action: "Faça um novo cadastro.",
+        action: "Solicite um novo convite ao administrador.",
       });
     }
 
@@ -80,7 +80,7 @@ async function markTokenAsUsed(activationTokenId) {
          id = $1
        RETURNING
          *
-     `,
+      `,
       values: [activationTokenId],
     });
 
@@ -102,21 +102,46 @@ async function activateUserByUserId(userId) {
     "create:session",
     "read:session",
     "update:user",
+    "read:dashboard",
+    "read:trash_events",
   ]);
   return activatedUser;
 }
 
-async function sendEmailToUser(user, activationToken) {
+async function sendEmailToUser(userObj, activationToken) {
+  const activationLink = `${webserver.origin}/convite/${activationToken.id}`;
+  const remetente =
+    process.env.EMAIL_FROM || "EcoSort AI <contato@ecosort.com.br>";
+
   await email.send({
-    from: "Saitama <contato@ecosort.com.br>",
-    to: user.email,
-    subject: "Ative seu cadastro no EcoSort!",
-    text: `${user.username}, clique no link abaixo para ativar seu cadastro no EcoSort:
+    from: remetente,
+    to: userObj.email,
+    subject: "Convite para o Painel EcoSort AI",
+    text: `Olá!\n\nVocê foi convidado(a) para acessar o painel administrativo da lixeira inteligente EcoSort.\n\nPara ativar sua conta e definir sua senha de acesso, acesse o link abaixo:\n\n${activationLink}\n\nAtenciosamente,\nEquipe EcoSort`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+        <h2 style="color: #16a34a;">Bem-vindo(a) ao EcoSort AI</h2>
+        <p>Olá!</p>
+        <p>Você foi convidado(a) para acessar o painel administrativo da lixeira inteligente <strong>EcoSort</strong>.</p>
+        <p>Para ativar sua conta e definir sua senha de acesso, clique no botão abaixo:</p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${activationLink}" style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
+            Aceitar Convite
+          </a>
+        </div>
 
-${webserver.origin}/cadastro/ativar/${activationToken.id}
-
-Atenciosamente,
-Equipe EcoSort`,
+        <p style="font-size: 14px; color: #666;">
+          Se o botão não funcionar, copie e cole este link no seu navegador:<br>
+          <a href="${activationLink}" style="color: #16a34a;">${activationLink}</a>
+        </p>
+        
+        <hr style="border: none; border-top: 1px solid #eaeaea; margin-top: 40px;" />
+        <p style="font-size: 12px; color: #999; text-align: center;">
+          Este é um e-mail automático do sistema EcoSort.
+        </p>
+      </div>
+    `,
   });
 }
 

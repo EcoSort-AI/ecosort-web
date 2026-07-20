@@ -16,6 +16,12 @@ router.post(postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function postHandler(request, response) {
+  console.log("--- DEBUG DE VARIÁVEIS NA VERCEL ---");
+  console.log("HOST:", process.env.EMAIL_SMTP_HOST);
+  console.log("PORTA:", process.env.EMAIL_SMTP_PORT);
+  console.log("USER:", process.env.EMAIL_SMTP_USER);
+  console.log("------------------------------------");
+
   const emailToInvite = request.body.email;
 
   if (!emailToInvite) {

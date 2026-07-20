@@ -25,7 +25,14 @@ describe("GET /api/v1/users/[username]", () => {
       expect(responseBody).toEqual({
         id: responseBody.id,
         username: "MesmoCase",
-        features: ["read:activation_token"],
+        features: [
+          "read:activation_token",
+          "create:session",
+          "read:session",
+          "update:user",
+          "read:dashboard",
+          "read:trash_events",
+        ],
         created_at: responseBody.created_at,
         updated_at: responseBody.updated_at,
       });
@@ -51,7 +58,14 @@ describe("GET /api/v1/users/[username]", () => {
       expect(responseBody).toEqual({
         id: responseBody.id,
         username: "CaseDiferente",
-        features: ["read:activation_token"],
+        features: [
+          "read:activation_token",
+          "create:session",
+          "read:session",
+          "update:user",
+          "read:dashboard",
+          "read:trash_events",
+        ],
         created_at: responseBody.created_at,
         updated_at: responseBody.updated_at,
       });

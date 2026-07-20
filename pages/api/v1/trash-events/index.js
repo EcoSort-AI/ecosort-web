@@ -6,7 +6,8 @@ import trashEvent from "models/trashEvent.js";
 
 const router = createRouter();
 
-router.get(getHandler);
+router.use(controller.injectAnonymousOrUser);
+router.get(controller.canRequest("read:trash_events"), getHandler);
 router.post(postHandler);
 
 export default router.handler(controller.errorHandlers);

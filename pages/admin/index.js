@@ -272,16 +272,27 @@ export default function AdminDashboard() {
           className="flex h-16 shrink-0 items-center gap-2 border-b border-[#374151] px-4 bg-[#1f1f1f] text-white"
           style={{ fontFamily: "sans-serif" }}
         >
-          <SidebarTrigger className="-ml-1 hover:bg-[#374151] hover:text-white text-gray-400" />
-          <Breadcrumb>
-            <BreadcrumbList>
-              <BreadcrumbItem>
-                <BreadcrumbPage className="text-gray-300 font-medium">
-                  Painel Administrativo
-                </BreadcrumbPage>
-              </BreadcrumbItem>
-            </BreadcrumbList>
-          </Breadcrumb>
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1 hover:bg-[#374151] hover:text-white text-gray-400" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem>
+                  <BreadcrumbPage className="text-gray-300 font-medium">
+                    Painel Administrativo
+                  </BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
+          >
+            <LogOut size={16} />
+            Sair
+          </button>
         </header>
 
         <div
@@ -292,15 +303,6 @@ export default function AdminDashboard() {
             <h2 className="text-3xl font-bold tracking-tight text-[#16a34a]">
               Monitoramento EcoSort
             </h2>
-
-            {/* Logout Button */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-[#1f1f1f] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
-            >
-              <LogOut size={16} />
-              Sair
-            </button>
           </div>
 
           {/* Stats Row */}

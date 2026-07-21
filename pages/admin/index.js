@@ -2,6 +2,7 @@
 import session from "models/session.js";
 import user from "models/user.js";
 import authorization from "models/authorization.js";
+import { useRouter } from "next/router";
 import useSWR from "swr";
 import React, { useState, useEffect, useMemo } from "react";
 import {
@@ -23,6 +24,7 @@ import {
   Trash2,
   MapPin,
   Clock,
+  LogOut,
 } from "lucide-react";
 import {
   GoogleMap,
@@ -75,6 +77,20 @@ const mapOptions = {
 export default function AdminDashboard() {
   const [isMounted, setIsMounted] = useState(false);
   const [selectedMapBin, setSelectedMapBin] = useState(null);
+
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/v1/sessions", {
+        method: "DELETE",
+      });
+    } catch (error) {
+      console.error("Erro ao encerrar sessão:", error);
+    } finally {
+      router.push("/");
+    }
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -243,6 +259,15 @@ export default function AdminDashboard() {
         <h2 className="text-3xl font-bold tracking-tight text-[#16a34a]">
           Monitoramento EcoSort
         </h2>
+
+        {/* Logout Button */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-[#1f1f1f] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
+        >
+          <LogOut size={16} />
+          Sair
+        </button>
       </div>
 
       {/* Stats Row */}

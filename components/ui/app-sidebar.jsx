@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   Sidebar,
   SidebarContent,
@@ -20,7 +21,7 @@ import {
   Trash2,
 } from "lucide-react";
 
-// Menu items do sistema EcoSort
+// Itens menu
 
 const items = [
   {
@@ -79,15 +80,20 @@ export function AppSidebar() {
       style={{ fontFamily: "sans-serif" }}
     >
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#16a34a]/20">
-            <Trash2 className="h-5 w-5 text-[#16a34a]" />
-          </div>
+        <Link
+          href="/"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#16a34a]/20">
+              <Trash2 className="h-5 w-5 text-[#16a34a]" />
+            </div>
 
-          <span className="text-lg font-bold tracking-tight text-white">
-            EcoSort AI
-          </span>
-        </div>
+            <span className="text-lg font-bold tracking-tight text-white">
+              EcoSort AI
+            </span>
+          </div>
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>

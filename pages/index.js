@@ -43,7 +43,7 @@ const activeBins = [
   },
 ];
 
-function Home() {
+function Home({ isLoggedIn }) {
   const [selectedBin, setSelectedBin] = useState(null);
 
   const { data, error } = useSWR(
@@ -96,23 +96,14 @@ function Home() {
           EcoSort AI
         </h1>
 
-        {/* Botão da Área do Administrador */}
+        {/* Login Button */}
         <Link
-          href="/login"
-          style={{
-            backgroundColor: "rgba(22, 163, 74, 0.1)",
-            color: "#16a34a",
-            border: "1px solid #16a34a",
-            padding: "8px 20px",
-            fontSize: "0.95em",
-            borderRadius: "8px",
-            textDecoration: "none",
-            fontWeight: "bold",
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          }}
+          href={isLoggedIn ? "/admin" : "/login"}
+          className={
+            "ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
+          }
         >
-          Área do Administrador
+          {isLoggedIn ? "Acessar Painel" : "Login"}
         </Link>
       </header>
 
@@ -393,6 +384,16 @@ function Home() {
       </main>
     </div>
   );
+}
+
+export async function getServerSideProps(context) {
+  const sessionToken = context.req.cookies.session_id;
+
+  return {
+    props: {
+      isLoggedIn: !!sessionToken,
+    },
+  };
 }
 
 export default Home;

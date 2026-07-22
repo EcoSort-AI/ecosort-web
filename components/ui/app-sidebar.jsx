@@ -59,7 +59,7 @@ const items = [
   {
     title: "Usuários",
 
-    url: "#",
+    url: "/admin/users",
 
     icon: Users,
   },

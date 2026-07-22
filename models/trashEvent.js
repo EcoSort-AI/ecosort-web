@@ -66,7 +66,7 @@ async function getUniqueClasses() {
     WHERE item_class IS NOT NULL 
     ORDER BY item_class ASC;
   `);
-  return results.rows.map(row => row.item_class);
+  return results.rows.map((row) => row.item_class);
 }
 
 async function countAll() {
@@ -80,7 +80,7 @@ const trashEvent = {
   create,
   listEvents,
   countAll,
-  getUniqueClasses
+  getUniqueClasses,
 };
 
 export default trashEvent;

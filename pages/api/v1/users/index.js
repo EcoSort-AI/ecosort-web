@@ -21,7 +21,9 @@ router.get(async (request, response) => {
       features, 
       created_at,
       CASE 
-        WHEN 'admin' = ANY(features) OR 'create:user' = ANY(features) THEN 'active'
+        WHEN 'admin' = ANY(features) 
+          OR 'create:user' = ANY(features) 
+          OR 'read:dashboard' = ANY(features) THEN 'active'
         ELSE 'pending'
       END as status
     FROM users 

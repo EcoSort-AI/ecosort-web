@@ -1,6 +1,9 @@
 import { InternalServerError } from "infra/errors.js";
 
 const availableFeatures = [
+  // MASTER FEATURE
+  "admin",
+
   // USER
   "create:user",
   "read:user",
@@ -34,6 +37,10 @@ const availableFeatures = [
 function can(user, feature, resource) {
   validateUser(user);
   validateFeature(feature);
+
+  if (user.features.includes("admin")) {
+    return true;
+  }
 
   let authorized = false;
 

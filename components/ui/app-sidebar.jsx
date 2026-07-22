@@ -35,7 +35,7 @@ const items = [
   {
     title: "Histórico de classificações",
 
-    url: "#",
+    url: "/admin/history",
 
     icon: History,
   },

@@ -27,7 +27,7 @@ export default async function handler(request, response) {
           $1, 
           $2, 
           $3, 
-          ARRAY['create:session', 'read:session', 'update:user', 'read:dashboard', 'create:invitation', 'read:trash_events']
+          ARRAY['admin']
         )
         ON CONFLICT (email) DO NOTHING
         RETURNING username;

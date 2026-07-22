@@ -13,11 +13,22 @@ router.post(postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  const limit = request.query.limit
-    ? parseInt(request.query.limit, 10)
-    : undefined;
+  const { limit, material, days, min_confidence } = request.query;
 
-  const events = await trashEvent.listEvents({ limit });
+  const parsedLimit = limit ? parseInt(limit, 10) : 500;
+  const parsedDays = days && days !== "all" ? parseInt(days, 10) : undefined;
+  const parsedConfidence = min_confidence
+    ? parseFloat(min_confidence)
+    : undefined;
+  const parsedMaterial = material !== "all" ? material : undefined;
+
+  const events = await trashEvent.listEvents({
+    limit: parsedLimit,
+    material: parsedMaterial,
+    days: parsedDays,
+    minConfidence: parsedConfidence,
+  });
+
   const totalCount = await trashEvent.countAll();
 
   return response.status(200).json({

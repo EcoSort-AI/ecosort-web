@@ -127,8 +127,6 @@ async function create(userInputValues) {
       "create:session",
       "read:session",
       "update:user",
-      "read:dashboard",
-      "read:trash_events",
     ];
   }
 }

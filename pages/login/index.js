@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -37,7 +38,7 @@ export default function LoginPage() {
       const body = await response.json();
 
       if (response.status === 201 || response.ok) {
-        router.push("/admin");
+        router.push("/admin/dashboard");
       } else {
         setError(body.message || "Credenciais inválidas. Tente novamente.");
       }
@@ -50,7 +51,8 @@ export default function LoginPage() {
 
   return (
     <div
-      className="flex w-full items-center justify-center p-6 md:p-10 text-white"
+      // Adicionado o "relative" aqui para o botão absolute funcionar corretamente
+      className="relative flex w-full items-center justify-center p-6 md:p-10 text-white"
       style={{
         fontFamily: "sans-serif",
         backgroundColor: "#242424",
@@ -58,6 +60,15 @@ export default function LoginPage() {
         paddingBottom: "50px",
       }}
     >
+      {/* Botão de voltar posicionado no canto superior esquerdo */}
+      <Link
+        href="/"
+        className="absolute top-6 left-6 md:top-10 md:left-10 flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors duration-200"
+      >
+        <ArrowLeft size={16} />
+        Voltar para o início
+      </Link>
+
       <div className="w-full max-w-sm">
         <div className={cn("flex flex-col gap-6")}>
           <Card className="bg-[#1f1f1f] border-[#374151] text-white">
@@ -106,7 +117,6 @@ export default function LoginPage() {
                         >
                           Senha
                         </label>
-                        {/* Mantive a recuperação de senha, mas você pode remover também se preferir lidar com senhas de admin só pelo banco */}
                         <Link
                           href="#"
                           className="ml-auto inline-block text-sm underline-offset-4 text-gray-400 hover:text-[#16a34a]"

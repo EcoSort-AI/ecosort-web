@@ -38,6 +38,7 @@ async function getHandler(request, response) {
 }
 
 async function postHandler(request, response) {
+  console.log("Dados: ", request.body);
   const trashEventSchema = z.object({
     bin_id: z.string({
       required_error: "O campo 'bin_id' é obrigatório.",
@@ -62,6 +63,8 @@ async function postHandler(request, response) {
       },
       { required_error: "O objeto 'detection' é obrigatório." },
     ),
+    image_path: z.string().optional(),
+    status: z.string().optional(),
   });
 
   try {

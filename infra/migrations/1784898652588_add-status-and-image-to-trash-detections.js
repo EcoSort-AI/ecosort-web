@@ -12,6 +12,4 @@ exports.up = (pgm) => {
   });
 };
 
-exports.down = (pgm) => {
-  pgm.dropColumns("trash_detections", ["status", "image_path"]);
-};
+exports.down = false;

@@ -43,7 +43,7 @@ const items = [
   {
     title: "Revisões pendentes",
 
-    url: "#",
+    url: "/admin/review",
 
     icon: ClipboardCheck,
   },

@@ -27,7 +27,8 @@ async function create(eventData) {
   }
 }
 
-async function listEvents({ limit = 500, material, days, minConfidence } = {}) {
+// 1. Adicionamos o status como parâmetro aceito
+async function listEvents({ limit = 500, material, days, minConfidence, status } = {}) {
   const queryValues = [];
   let valueIndex = 1;
 
@@ -48,6 +49,13 @@ async function listEvents({ limit = 500, material, days, minConfidence } = {}) {
   if (minConfidence !== undefined) {
     queryText += ` AND confidence >= $${valueIndex}`;
     queryValues.push(minConfidence);
+    valueIndex++;
+  }
+
+  // 2. Bloco novo: Injeta o filtro de status na SQL
+  if (status) {
+    queryText += ` AND status = $${valueIndex}`;
+    queryValues.push(status);
     valueIndex++;
   }
 

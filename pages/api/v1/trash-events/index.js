@@ -13,7 +13,8 @@ router.post(postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  const { limit, material, days, min_confidence } = request.query;
+  // 1. Recebemos o status da URL
+  const { limit, material, days, min_confidence, status } = request.query;
 
   const parsedLimit = limit ? parseInt(limit, 10) : 500;
   const parsedDays = days && days !== "all" ? parseInt(days, 10) : undefined;
@@ -21,12 +22,15 @@ async function getHandler(request, response) {
     ? parseFloat(min_confidence)
     : undefined;
   const parsedMaterial = material !== "all" ? material : undefined;
+  // 2. Se for "all", deixamos undefined para não filtrar no banco
+  const parsedStatus = status !== "all" ? status : undefined; 
 
   const events = await trashEvent.listEvents({
     limit: parsedLimit,
     material: parsedMaterial,
     days: parsedDays,
     minConfidence: parsedConfidence,
+    status: parsedStatus, // 3. Passamos para o Model
   });
 
   const totalCount = await trashEvent.countAll();

@@ -7,7 +7,6 @@ import useSWR from "swr";
 import React, { useState, useEffect, useMemo } from "react";
 import { translateMaterial } from "@/lib/dictionary";
 
-// Importações da Sidebar adicionadas aqui
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import {
   SidebarInset,
@@ -41,6 +40,7 @@ import {
   MapPin,
   Clock,
   LogOut,
+  AlertCircle,
 } from "lucide-react";
 import {
   GoogleMap,
@@ -132,6 +132,7 @@ export default function AdminDashboard() {
           averageConfidence: "0.0",
           mostActiveBin: "Nenhuma",
           topCategory: "Nenhum",
+          pendingReviews: 0,
         },
         volumeOverTime: [],
         categories: [],
@@ -159,6 +160,7 @@ export default function AdminDashboard() {
 
     const totalDetections = rawData.length;
     let totalConfidence = 0;
+    let pendingReviewsCount = 0; 
     const binCounts = {};
     const categoryCounts = {};
     const dateCounts = {};
@@ -166,6 +168,11 @@ export default function AdminDashboard() {
 
     rawData.forEach((item) => {
       totalConfidence += item.confidence;
+      
+      if (item.status === "pending") {
+        pendingReviewsCount++;
+      }
+
       binCounts[item.bin_id] = (binCounts[item.bin_id] || 0) + 1;
       categoryCounts[item.item_class] =
         (categoryCounts[item.item_class] || 0) + 1;
@@ -238,6 +245,7 @@ export default function AdminDashboard() {
             categoryCounts[a] > categoryCounts[b] ? a : b,
           ),
         ),
+        pendingReviews: pendingReviewsCount, 
       },
       volumeOverTime: Object.keys(dateCounts)
         .map((k) => ({ date: k, detections: dateCounts[k] }))
@@ -313,7 +321,24 @@ export default function AdminDashboard() {
           </div>
 
           {/* Stats Row */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-4">
+            
+            <Card
+              onClick={() => router.push("/admin/review")}
+              className="bg-[#ef4444]/10 border-[#ef4444]/50 text-white cursor-pointer hover:bg-[#ef4444]/20 transition-all transform hover:scale-[1.02]"
+            >
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-[#ef4444]">
+                  Aguardando Revisão
+                </CardTitle>
+                <AlertCircle className="h-4 w-4 text-[#ef4444]" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-[#ef4444]">
+                  {dashboardData.kpis.pendingReviews}
+                </div>
+              </CardContent>
+            </Card>
             {[
               {
                 title: "Total de Detecções",

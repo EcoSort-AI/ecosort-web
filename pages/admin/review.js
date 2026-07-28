@@ -6,6 +6,7 @@ import user from "models/user.js";
 import authorization from "models/authorization.js";
 
 import { translateMaterial } from "@/lib/dictionary";
+import { toast } from "sonner"; 
 
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import {
@@ -107,13 +108,15 @@ export default function ReviewPage() {
           delete newState[event.id];
           return newState;
         });
+        
+        toast.success(`Classificação atualizada para ${translateMaterial(classToSend)}!`);
       } else {
         const errorData = await res.json();
-        alert(`Erro: ${errorData.message}`);
+        toast.error(`Erro: ${errorData.message}`);
       }
     } catch (error) {
       console.error("Erro ao validar:", error);
-      alert("Erro de conexão ao tentar validar a imagem.");
+      toast.error("Erro de conexão ao tentar validar a imagem.");
     }
   }
 

@@ -28,7 +28,7 @@ async function create(eventData) {
 }
 
 async function listEvents({
-  limit = 500,
+  limit,
   material,
   days,
   minConfidence,
@@ -70,8 +70,15 @@ async function listEvents({
     valueIndex++;
   }
 
-  queryText += ` ORDER BY trash_detections.detected_at DESC LIMIT $${valueIndex};`;
-  queryValues.push(limit);
+  queryText += ` ORDER BY trash_detections.detected_at DESC`;
+
+  if (limit !== undefined && limit !== null) {
+    queryText += ` LIMIT $${valueIndex}`;
+    queryValues.push(limit);
+    valueIndex++;
+  }
+
+  queryText += `;`;
 
   const results = await database.query({
     text: queryText,

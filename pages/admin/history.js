@@ -21,18 +21,31 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { Card } from "@/components/ui/card";
-import { LogOut, Filter, Search, Calendar, Cpu, Box } from "lucide-react";
+import {
+  LogOut,
+  Filter,
+  Search,
+  Calendar,
+  Cpu,
+  Box,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
 export default function HistoryPage({ availableClasses = [] }) {
   const router = useRouter();
 
+  // --- ESTADOS DOS FILTROS ---
+  const [filterStatus, setFilterStatus] = useState("all"); // NOVO FILTRO
   const [filterMaterial, setFilterMaterial] = useState("all");
   const [filterDays, setFilterDays] = useState("all");
   const [filterConfidence, setFilterConfidence] = useState(0);
 
+  // Adicionando o status nos parâmetros enviados para a API
   const queryParams = new URLSearchParams({
+    status: filterStatus,
     material: filterMaterial,
     days: filterDays,
     min_confidence: filterConfidence,
@@ -63,6 +76,23 @@ export default function HistoryPage({ availableClasses = [] }) {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const renderStatusBadge = (status) => {
+    if (status === "pending") {
+      return (
+        <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 font-medium px-2.5 py-1 rounded-md text-xs flex items-center gap-1.5 w-fit">
+          <Clock size={12} />
+          Revisão
+        </span>
+      );
+    }
+    return (
+      <span className="bg-green-500/10 text-green-500 border border-green-500/20 font-medium px-2.5 py-1 rounded-md text-xs flex items-center gap-1.5 w-fit">
+        <CheckCircle2 size={12} />
+        Processado
+      </span>
+    );
   };
 
   return (
@@ -109,8 +139,24 @@ export default function HistoryPage({ availableClasses = [] }) {
 
           {/* Filter Bar */}
           <Card className="bg-[#1f1f1f] border-[#374151] p-4 mb-6 text-white">
-            <div className="flex flex-col md:flex-row gap-4 items-end">
-              <div className="w-full md:w-1/4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+              {/* NOVO CAMPO DE STATUS */}
+              <div className="w-full">
+                <label className="text-xs font-medium text-gray-400 uppercase flex items-center gap-1 mb-2">
+                  <Filter size={14} /> Status
+                </label>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
+                >
+                  <option value="all">Todos os Status</option>
+                  <option value="processed">Apenas Processados</option>
+                  <option value="pending">Aguardando Revisão</option>
+                </select>
+              </div>
+
+              <div className="w-full">
                 <label className="text-xs font-medium text-gray-400 uppercase flex items-center gap-1 mb-2">
                   <Box size={14} /> Classe
                 </label>
@@ -129,7 +175,7 @@ export default function HistoryPage({ availableClasses = [] }) {
                 </select>
               </div>
 
-              <div className="w-full md:w-1/4">
+              <div className="w-full">
                 <label className="text-xs font-medium text-gray-400 uppercase flex items-center gap-1 mb-2">
                   <Calendar size={14} /> Período
                 </label>
@@ -147,7 +193,7 @@ export default function HistoryPage({ availableClasses = [] }) {
                 </select>
               </div>
 
-              <div className="w-full md:w-1/4">
+              <div className="w-full">
                 <label className="text-xs font-medium text-gray-400 uppercase flex items-center gap-1 mb-2">
                   <Cpu size={14} /> Confiança Mínima IA
                 </label>
@@ -174,13 +220,14 @@ export default function HistoryPage({ availableClasses = [] }) {
                     <th className="px-6 py-4">Lixeira (ID)</th>
                     <th className="px-6 py-4">Classificação</th>
                     <th className="px-6 py-4">Confiança (IA)</th>
+                    <th className="px-6 py-4">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading && (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="px-6 py-8 text-center text-gray-400"
                       >
                         Carregando registros...
@@ -190,7 +237,7 @@ export default function HistoryPage({ availableClasses = [] }) {
                   {error && (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="px-6 py-8 text-center text-[#ef4444]"
                       >
                         Erro ao carregar o histórico.
@@ -200,7 +247,7 @@ export default function HistoryPage({ availableClasses = [] }) {
                   {!isLoading && !error && eventsList?.length === 0 && (
                     <tr>
                       <td
-                        colSpan="4"
+                        colSpan="5"
                         className="px-6 py-8 text-center text-gray-400"
                       >
                         Nenhuma leitura encontrada para estes filtros.
@@ -231,6 +278,9 @@ export default function HistoryPage({ availableClasses = [] }) {
                           >
                             {formatConfidence(event.confidence)}
                           </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {renderStatusBadge(event.status)}
                         </td>
                       </tr>
                     ))}

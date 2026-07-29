@@ -8,23 +8,33 @@ async function create(eventData) {
     const results = await database.query({
       text: `
         INSERT INTO trash_detections 
-          (bin_id, item_class, confidence, detected_at) 
+          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, status) 
         VALUES 
-          ($1, $2, $3, $4) 
+          ($1, $2, $3, $4, $5, $6, $7) 
         RETURNING *;
       `,
       values: [
         data.bin_id,
         data.detection.class_name,
+        data.detection.class_name,
         data.detection.confidence,
         data.timestamp,
+        data.image_path || null,
+        data.status || "pending",
       ],
     });
     return results.rows[0];
   }
 }
 
-async function listEvents({ limit = 500, material, days, minConfidence } = {}) {
+// 1. Adicionamos o status como parâmetro aceito
+async function listEvents({
+  limit = 500,
+  material,
+  days,
+  minConfidence,
+  status,
+} = {}) {
   const queryValues = [];
   let valueIndex = 1;
 
@@ -45,6 +55,13 @@ async function listEvents({ limit = 500, material, days, minConfidence } = {}) {
   if (minConfidence !== undefined) {
     queryText += ` AND confidence >= $${valueIndex}`;
     queryValues.push(minConfidence);
+    valueIndex++;
+  }
+
+  // 2. Bloco novo: Injeta o filtro de status na SQL
+  if (status) {
+    queryText += ` AND status = $${valueIndex}`;
+    queryValues.push(status);
     valueIndex++;
   }
 

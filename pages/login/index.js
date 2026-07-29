@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
+import { useSWRConfig } from "swr";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { mutate } = useSWRConfig();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
@@ -38,6 +40,8 @@ export default function LoginPage() {
       const body = await response.json();
 
       if (response.status === 201 || response.ok) {
+        await mutate("/api/v1/user");
+        
         router.push("/admin/dashboard");
       } else {
         setError(body.message || "Credenciais inválidas. Tente novamente.");
@@ -51,7 +55,6 @@ export default function LoginPage() {
 
   return (
     <div
-      // Adicionado o "relative" aqui para o botão absolute funcionar corretamente
       className="relative flex w-full items-center justify-center p-6 md:p-10 text-white"
       style={{
         fontFamily: "sans-serif",
@@ -60,7 +63,6 @@ export default function LoginPage() {
         paddingBottom: "50px",
       }}
     >
-      {/* Botão de voltar posicionado no canto superior esquerdo */}
       <Link
         href="/"
         className="absolute top-6 left-6 md:top-10 md:left-10 flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors duration-200"

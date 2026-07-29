@@ -8,9 +8,9 @@ async function create(eventData) {
     const results = await database.query({
       text: `
         INSERT INTO trash_detections 
-          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, status) 
+          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, status, model_version) 
         VALUES 
-          ($1, $2, $3, $4, $5, $6, $7) 
+          ($1, $2, $3, $4, $5, $6, $7, $8) 
         RETURNING *;
       `,
       values: [
@@ -21,6 +21,7 @@ async function create(eventData) {
         data.timestamp,
         data.image_path || null,
         data.status || "pending",
+        data.model_version || "v1.0"
       ],
     });
     return results.rows[0];

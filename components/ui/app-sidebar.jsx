@@ -1,7 +1,7 @@
 import Link from "next/link";
 import useSWR from "swr";
 import React, { useEffect, useRef } from "react";
-import { toast } from "sonner"; 
+import { toast } from "sonner";
 import {
   Sidebar,
   SidebarContent,
@@ -28,7 +28,11 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 
 const items = [
   { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
-  { title: "Histórico de classificações", url: "/admin/history", icon: History },
+  {
+    title: "Histórico de classificações",
+    url: "/admin/history",
+    icon: History,
+  },
   { title: "Revisões pendentes", url: "/admin/review", icon: ClipboardCheck },
   { title: "Analytics", url: "#", icon: LineChart },
   { title: "Usuários", url: "/admin/users", icon: Users },
@@ -39,9 +43,9 @@ export function AppSidebar() {
   const { data } = useSWR("/api/v1/trash-events?status=pending", fetcher, {
     refreshInterval: 5000,
   });
-  
+
   const pendingCount = data?.events?.length || 0;
-  
+
   const previousCountRef = useRef(undefined);
 
   useEffect(() => {
@@ -49,12 +53,15 @@ export function AppSidebar() {
       const currentCount = data.events.length;
 
       if (
-        previousCountRef.current !== undefined && 
+        previousCountRef.current !== undefined &&
         currentCount > previousCountRef.current
       ) {
         const diff = currentCount - previousCountRef.current;
-        const msg = diff === 1 ? "Nova classificação pendente!" : `${diff} novas classificações pendentes!`;
-        
+        const msg =
+          diff === 1
+            ? "Nova classificação pendente!"
+            : `${diff} novas classificações pendentes!`;
+
         toast.warning(msg, {
           description: "Acesse a página de revisões para validar.",
         });
@@ -99,12 +106,15 @@ export function AppSidebar() {
                     asChild
                     className="hover:!bg-[#374151] hover:!text-white !text-gray-300 transition-colors"
                   >
-                    <Link href={item.url} className="flex items-center justify-between w-full">
+                    <Link
+                      href={item.url}
+                      className="flex items-center justify-between w-full"
+                    >
                       <div className="flex items-center gap-3">
                         <item.icon className="h-4 w-4 text-[#16a34a]" />
                         <span>{item.title}</span>
                       </div>
-                      
+
                       {item.url === "/admin/review" && pendingCount > 0 && (
                         <span className="bg-[#ef4444] text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center justify-center">
                           {pendingCount}

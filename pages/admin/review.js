@@ -6,7 +6,7 @@ import user from "models/user.js";
 import authorization from "models/authorization.js";
 
 import { translateMaterial } from "@/lib/dictionary";
-import { toast } from "sonner"; 
+import { toast } from "sonner";
 
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import {
@@ -108,8 +108,10 @@ export default function ReviewPage() {
           delete newState[event.id];
           return newState;
         });
-        
-        toast.success(`Classificação atualizada para ${translateMaterial(classToSend)}!`);
+
+        toast.success(
+          `Classificação atualizada para ${translateMaterial(classToSend)}!`,
+        );
       } else {
         const errorData = await res.json();
         toast.error(`Erro: ${errorData.message}`);

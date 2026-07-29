@@ -67,7 +67,7 @@ describe("GET /api/v1/trash-events", () => {
           headers: {
             cookie: `session_id=${session.token}`,
           },
-        }
+        },
       );
 
       expect(response.status).toBe(200);
@@ -75,10 +75,10 @@ describe("GET /api/v1/trash-events", () => {
 
       expect(Array.isArray(responseBody.events)).toBe(true);
       expect(responseBody.events.length).toBeGreaterThan(0);
-      
+
       responseBody.events.forEach((event) => {
         expect(event.status).toBe("pending");
       });
-    })
+    });
   });
 });

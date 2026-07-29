@@ -23,7 +23,7 @@ async function getHandler(request, response) {
     : undefined;
   const parsedMaterial = material !== "all" ? material : undefined;
   // 2. Se for "all", deixamos undefined para não filtrar no banco
-  const parsedStatus = status !== "all" ? status : undefined; 
+  const parsedStatus = status !== "all" ? status : undefined;
 
   const events = await trashEvent.listEvents({
     limit: parsedLimit,

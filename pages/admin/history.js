@@ -21,7 +21,16 @@ import {
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
 import { Card } from "@/components/ui/card";
-import { LogOut, Filter, Search, Calendar, Cpu, Box, Clock, CheckCircle2 } from "lucide-react";
+import {
+  LogOut,
+  Filter,
+  Search,
+  Calendar,
+  Cpu,
+  Box,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -131,7 +140,6 @@ export default function HistoryPage({ availableClasses = [] }) {
           {/* Filter Bar */}
           <Card className="bg-[#1f1f1f] border-[#374151] p-4 mb-6 text-white">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              
               {/* NOVO CAMPO DE STATUS */}
               <div className="w-full">
                 <label className="text-xs font-medium text-gray-400 uppercase flex items-center gap-1 mb-2">

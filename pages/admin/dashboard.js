@@ -160,7 +160,7 @@ export default function AdminDashboard() {
 
     const totalDetections = rawData.length;
     let totalConfidence = 0;
-    let pendingReviewsCount = 0; 
+    let pendingReviewsCount = 0;
     const binCounts = {};
     const categoryCounts = {};
     const dateCounts = {};
@@ -168,7 +168,7 @@ export default function AdminDashboard() {
 
     rawData.forEach((item) => {
       totalConfidence += item.confidence;
-      
+
       if (item.status === "pending") {
         pendingReviewsCount++;
       }
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
             categoryCounts[a] > categoryCounts[b] ? a : b,
           ),
         ),
-        pendingReviews: pendingReviewsCount, 
+        pendingReviews: pendingReviewsCount,
       },
       volumeOverTime: Object.keys(dateCounts)
         .map((k) => ({ date: k, detections: dateCounts[k] }))
@@ -322,7 +322,6 @@ export default function AdminDashboard() {
 
           {/* Stats Row */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-4">
-            
             <Card
               onClick={() => router.push("/admin/review")}
               className="bg-[#ef4444]/10 border-[#ef4444]/50 text-white cursor-pointer hover:bg-[#ef4444]/20 transition-all transform hover:scale-[1.02]"

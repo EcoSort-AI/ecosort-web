@@ -28,7 +28,13 @@ async function create(eventData) {
 }
 
 // 1. Adicionamos o status como parâmetro aceito
-async function listEvents({ limit = 500, material, days, minConfidence, status } = {}) {
+async function listEvents({
+  limit = 500,
+  material,
+  days,
+  minConfidence,
+  status,
+} = {}) {
   const queryValues = [];
   let valueIndex = 1;
 

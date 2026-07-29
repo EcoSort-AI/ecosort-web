@@ -34,7 +34,7 @@ const items = [
     icon: History,
   },
   { title: "Revisões pendentes", url: "/admin/review", icon: ClipboardCheck },
-  { title: "Analytics", url: "#", icon: LineChart },
+  { title: "Estatísticas", url: "/admin/analytics", icon: LineChart },
   { title: "Usuários", url: "/admin/users", icon: Users },
   { title: "Configurações", url: "#", icon: Settings },
 ];

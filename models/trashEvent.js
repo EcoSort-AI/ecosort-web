@@ -21,7 +21,7 @@ async function create(eventData) {
         data.timestamp,
         data.image_path || null,
         data.status || "pending",
-        data.model_version || "v1.0",
+        data.model_version || "v1.0.0",
       ],
     });
     return results.rows[0];

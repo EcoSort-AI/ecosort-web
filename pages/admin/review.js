@@ -21,7 +21,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
-import { LogOut } from "lucide-react";
+import { LogOut, Loader2, Check } from "lucide-react";
 
 import {
   Combobox,
@@ -35,6 +35,7 @@ import {
 export default function ReviewPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [validatingId, setValidatingId] = useState(null);
 
   const [selectedClasses, setSelectedClasses] = useState({});
 
@@ -94,6 +95,8 @@ export default function ReviewPage() {
   async function handleConfirm(event) {
     const classToSend = selectedClasses[event.id] || event.item_class;
 
+    setValidatingId(event.id);
+
     try {
       const res = await fetch(`/api/v1/trash-events/${event.id}`, {
         method: "PATCH",
@@ -120,6 +123,8 @@ export default function ReviewPage() {
     } catch (error) {
       console.error("Erro ao validar:", error);
       toast.error("Erro de conexão ao tentar validar a imagem.");
+    } finally {
+      setValidatingId(null);
     }
   }
 
@@ -160,7 +165,7 @@ export default function ReviewPage() {
         >
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-3xl font-bold tracking-tight text-[#16a34a]">
-              Revisão de Imagens (EcoSort)
+              Revisão de Imagens
             </h2>
           </div>
 
@@ -177,6 +182,7 @@ export default function ReviewPage() {
               {events.map((event) => {
                 const currentSelection =
                   selectedClasses[event.id] || event.item_class;
+                const isCurrentlyValidating = validatingId === event.id;
 
                 return (
                   <div
@@ -232,11 +238,14 @@ export default function ReviewPage() {
                             placeholder="Selecione a classe..."
                             readOnly={true}
                             value={translateMaterial(currentSelection)}
+                            disabled={isCurrentlyValidating}
                             style={{
-                              cursor: "pointer",
+                              cursor: isCurrentlyValidating
+                                ? "not-allowed"
+                                : "pointer",
                               fontFamily: "sans-serif",
                             }}
-                            className="capitalize bg-[#1f1f1f] text-white border-[#374151] placeholder:text-gray-500 focus:ring-[#16a34a] !cursor-pointer !select-none caret-transparent"
+                            className="capitalize bg-[#1f1f1f] text-white border-[#374151] placeholder:text-gray-500 focus:ring-[#16a34a] !cursor-pointer !select-none caret-transparent disabled:opacity-50"
                           />
                           <ComboboxContent
                             style={{ fontFamily: "sans-serif" }}
@@ -268,9 +277,17 @@ export default function ReviewPage() {
 
                       <button
                         onClick={() => handleConfirm(event)}
-                        className="w-full py-2 px-4 bg-[#16a34a] hover:bg-green-600 text-white font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                        disabled={isCurrentlyValidating}
+                        className="w-full py-2 px-4 bg-[#16a34a] hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                       >
-                        Confirmar
+                        {isCurrentlyValidating ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Validando...
+                          </>
+                        ) : (
+                          <>Confirmar</>
+                        )}
                       </button>
                     </div>
                   </div>

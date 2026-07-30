@@ -27,7 +27,19 @@ async function patchHandler(request, response) {
         userId = sessionObject.user_id;
       }
     } catch (err) {
+      console.error("[Auth Error] Falha ao verificar token:", err);
+      throw new ValidationError({
+        message: "Sessão inválida ou expirada.",
+        action: "Faça login novamente para validar a imagem.",
+      });
     }
+  }
+
+  if (!userId) {
+    throw new ValidationError({
+      message: "Usuário não autenticado.",
+      action: "Faça login para continuar.",
+    });
   }
 
   const patchSchema = z.object({

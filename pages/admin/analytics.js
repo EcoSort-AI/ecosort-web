@@ -65,7 +65,7 @@ export default function AnalyticsPage() {
   );
 
   const analyticsData = useMemo(() => {
-    if (!apiData) {
+    if (!apiData || apiData.message || !apiData.confusionMatrix) {
       return {
         globalAccuracy: 0,
         totalReviewed: 0,

@@ -38,6 +38,8 @@ export default function AnalyticsPage() {
   const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
+  const [selectedVersion, setSelectedVersion] = useState("all");
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -54,9 +56,13 @@ export default function AnalyticsPage() {
     }
   };
 
-  const { data: apiData, error } = useSWR("/api/v1/analytics", fetcher, {
-    refreshInterval: 10000,
-  });
+  const { data: apiData, error } = useSWR(
+    `/api/v1/analytics?version=${selectedVersion}`,
+    fetcher,
+    {
+      refreshInterval: 10000,
+    },
+  );
 
   const analyticsData = useMemo(() => {
     if (!apiData) {
@@ -67,6 +73,7 @@ export default function AnalyticsPage() {
         confusionMatrix: [],
         uniqueClasses: [],
         chartData: [],
+        availableVersions: [],
       };
     }
 
@@ -88,6 +95,7 @@ export default function AnalyticsPage() {
       ...apiData,
       uniqueClasses,
       chartData,
+      availableVersions: apiData.availableVersions || [],
     };
   }, [apiData]);
 
@@ -173,16 +181,25 @@ export default function AnalyticsPage() {
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-400">
-                  Status do Modelo
+                  Versão do Modelo
                 </CardTitle>
                 <TrendingUp className="h-4 w-4 text-blue-400" />
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-400">
-                  V1.0
-                </div>
+                <select
+                  value={selectedVersion}
+                  onChange={(e) => setSelectedVersion(e.target.value)}
+                  className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-lg text-blue-400 font-bold focus:border-[#16a34a] focus:outline-none mb-1"
+                >
+                  <option value="all">Todas as Versões</option>
+                  {analyticsData.availableVersions.map((v) => (
+                    <option key={v} value={v}>
+                      {v}
+                    </option>
+                  ))}
+                </select>
                 <p className="text-xs text-gray-500 mt-1">
-                  Classificação de Imagem Padrão
+                  Filtre as estatísticas por versão da IA
                 </p>
               </CardContent>
             </Card>
@@ -199,7 +216,11 @@ export default function AnalyticsPage() {
                     data={analyticsData.chartData}
                     margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="#374151"
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="category"
                       stroke="#9ca3af"
@@ -219,7 +240,15 @@ export default function AnalyticsPage() {
                       contentStyle={{
                         backgroundColor: "#1f1f1f",
                         border: "1px solid #374151",
-                        color: "#fff",
+                        borderRadius: "6px",
+                      }}
+                      labelStyle={{
+                        color: "#ffffff",
+                        fontWeight: "bold",
+                        marginBottom: "4px",
+                      }}
+                      itemStyle={{
+                        color: "#e5e7eb",
                       }}
                       formatter={(value) => [`${value}%`, "Acurácia"]}
                     />
@@ -268,7 +297,7 @@ export default function AnalyticsPage() {
                           const match = analyticsData.confusionMatrix.find(
                             (m) =>
                               m.real === realClass &&
-                              m.previsto === predictedClass
+                              m.previsto === predictedClass,
                           );
                           const count = match ? match.count : 0;
                           const isTruePositive = realClass === predictedClass;

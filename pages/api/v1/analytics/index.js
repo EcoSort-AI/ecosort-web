@@ -6,20 +6,39 @@ export default async function handler(req, res) {
   }
 
   try {
-    const result = await database.query(`
+    const { version } = req.query;
+
+    const versionsResult = await database.query(`
+      SELECT DISTINCT model_version 
+      FROM trash_detections 
+      WHERE model_version IS NOT NULL 
+      ORDER BY model_version DESC;
+    `);
+    const availableVersions = versionsResult.rows.map(r => r.model_version);
+
+    let queryText = `
       SELECT 
         item_class as real, 
         ai_prediction as previsto, 
         COUNT(*)::int as count 
       FROM trash_detections 
       WHERE ai_prediction IS NOT NULL AND item_class IS NOT NULL
-      GROUP BY item_class, ai_prediction;
-    `);
+    `;
+    const values = [];
 
+    if (version && version !== 'all') {
+      queryText += ` AND model_version = $1`;
+      values.push(version);
+    }
+
+    queryText += ` GROUP BY item_class, ai_prediction;`;
+
+    const result = await database.query({ text: queryText, values });
     const rows = result.rows;
 
     if (rows.length === 0) {
       return res.status(200).json({
+        availableVersions,
         globalAccuracy: 0,
         totalReviewed: 0,
         accuracyByClass: [],
@@ -71,6 +90,7 @@ export default async function handler(req, res) {
     });
 
     return res.status(200).json({
+      availableVersions,
       globalAccuracy,
       totalReviewed,
       accuracyByClass,

@@ -41,7 +41,7 @@ export default function LoginPage() {
 
       if (response.status === 201 || response.ok) {
         await mutate("/api/v1/user");
-        
+
         router.push("/admin/dashboard");
       } else {
         setError(body.message || "Credenciais inválidas. Tente novamente.");

@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";

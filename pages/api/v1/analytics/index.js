@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       WHERE model_version IS NOT NULL 
       ORDER BY model_version DESC;
     `);
-    const availableVersions = versionsResult.rows.map(r => r.model_version);
+    const availableVersions = versionsResult.rows.map((r) => r.model_version);
 
     let queryText = `
       SELECT 
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     `;
     const values = [];
 
-    if (version && version !== 'all') {
+    if (version && version !== "all") {
       queryText += ` AND model_version = $1`;
       values.push(version);
     }
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
         classStats[real] = { total: 0, correct: 0 };
       }
       classStats[real].total += count;
-      
+
       if (real === previsto) {
         classStats[real].correct += count;
       }

@@ -282,7 +282,9 @@ export default function HistoryPage({ availableClasses = [] }) {
                         </td>
                         <td className="px-6 py-4 text-gray-300 text-xs font-medium">
                           {event.reviewed_by_username || (
-                            <span className="text-gray-500 italic">Sistema</span>
+                            <span className="text-gray-500 italic">
+                              Sistema
+                            </span>
                           )}
                         </td>
                       </tr>

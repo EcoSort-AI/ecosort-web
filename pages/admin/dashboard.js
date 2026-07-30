@@ -158,7 +158,7 @@ export default function AdminDashboard() {
       };
     }
 
-    const totalDetections = rawData.length;
+    const totalDetections = apiData.total || rawData.length;
     let totalConfidence = 0;
     let pendingReviewsCount = 0;
     const binCounts = {};

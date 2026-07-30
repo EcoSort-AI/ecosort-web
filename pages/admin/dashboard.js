@@ -411,8 +411,11 @@ export default function AdminDashboard() {
                     <XAxis
                       dataKey="date"
                       stroke="#9ca3af"
+                      fontSize={12}
                       tickLine={false}
                       axisLine={false}
+                      tickMargin={10}
+                      minTickGap={30}
                     />
                     <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} />
                     <Tooltip

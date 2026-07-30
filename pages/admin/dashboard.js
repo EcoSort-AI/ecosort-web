@@ -279,6 +279,8 @@ export default function AdminDashboard() {
       </div>
     );
 
+  const hasPendingReviews = dashboardData.kpis.pendingReviews > 0;
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -324,20 +326,37 @@ export default function AdminDashboard() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-4">
             <Card
               onClick={() => router.push("/admin/review")}
-              className="bg-[#ef4444]/10 border-[#ef4444]/50 text-white cursor-pointer hover:bg-[#ef4444]/20 transition-all transform hover:scale-[1.02]"
+              className={`text-white cursor-pointer transition-all transform hover:scale-[1.02] ${
+                hasPendingReviews
+                  ? "bg-[#ef4444]/10 border-[#ef4444]/50 hover:bg-[#ef4444]/20"
+                  : "bg-[#1f1f1f] border-[#374151] hover:bg-[#374151]/50"
+              }`}
             >
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-[#ef4444]">
+                <CardTitle
+                  className={`text-sm font-medium ${
+                    hasPendingReviews ? "text-[#ef4444]" : "text-gray-400"
+                  }`}
+                >
                   Aguardando Revisão
                 </CardTitle>
-                <AlertCircle className="h-4 w-4 text-[#ef4444]" />
+                <AlertCircle
+                  className={`h-4 w-4 ${
+                    hasPendingReviews ? "text-[#ef4444]" : "text-gray-400"
+                  }`}
+                />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-[#ef4444]">
+                <div
+                  className={`text-2xl font-bold ${
+                    hasPendingReviews ? "text-[#ef4444]" : ""
+                  }`}
+                >
                   {dashboardData.kpis.pendingReviews}
                 </div>
               </CardContent>
             </Card>
+
             {[
               {
                 title: "Total de Detecções",
@@ -392,8 +411,11 @@ export default function AdminDashboard() {
                     <XAxis
                       dataKey="date"
                       stroke="#9ca3af"
+                      fontSize={12}
                       tickLine={false}
                       axisLine={false}
+                      tickMargin={10}
+                      minTickGap={30}
                     />
                     <YAxis stroke="#9ca3af" tickLine={false} axisLine={false} />
                     <Tooltip

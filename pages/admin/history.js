@@ -37,13 +37,11 @@ const fetcher = (url) => fetch(url).then((res) => res.json());
 export default function HistoryPage({ availableClasses = [] }) {
   const router = useRouter();
 
-  // --- ESTADOS DOS FILTROS ---
-  const [filterStatus, setFilterStatus] = useState("all"); // NOVO FILTRO
+  const [filterStatus, setFilterStatus] = useState("all");
   const [filterMaterial, setFilterMaterial] = useState("all");
   const [filterDays, setFilterDays] = useState("all");
   const [filterConfidence, setFilterConfidence] = useState(0);
 
-  // Adicionando o status nos parâmetros enviados para a API
   const queryParams = new URLSearchParams({
     status: filterStatus,
     material: filterMaterial,
@@ -140,7 +138,6 @@ export default function HistoryPage({ availableClasses = [] }) {
           {/* Filter Bar */}
           <Card className="bg-[#1f1f1f] border-[#374151] p-4 mb-6 text-white">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
-              {/* NOVO CAMPO DE STATUS */}
               <div className="w-full">
                 <label className="text-xs font-medium text-gray-400 uppercase flex items-center gap-1 mb-2">
                   <Filter size={14} /> Status
@@ -221,13 +218,14 @@ export default function HistoryPage({ availableClasses = [] }) {
                     <th className="px-6 py-4">Classificação</th>
                     <th className="px-6 py-4">Confiança (IA)</th>
                     <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Validador</th>
                   </tr>
                 </thead>
                 <tbody>
                   {isLoading && (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan="6"
                         className="px-6 py-8 text-center text-gray-400"
                       >
                         Carregando registros...
@@ -237,7 +235,7 @@ export default function HistoryPage({ availableClasses = [] }) {
                   {error && (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan="6"
                         className="px-6 py-8 text-center text-[#ef4444]"
                       >
                         Erro ao carregar o histórico.
@@ -247,7 +245,7 @@ export default function HistoryPage({ availableClasses = [] }) {
                   {!isLoading && !error && eventsList?.length === 0 && (
                     <tr>
                       <td
-                        colSpan="5"
+                        colSpan="6"
                         className="px-6 py-8 text-center text-gray-400"
                       >
                         Nenhuma leitura encontrada para estes filtros.
@@ -281,6 +279,13 @@ export default function HistoryPage({ availableClasses = [] }) {
                         </td>
                         <td className="px-6 py-4">
                           {renderStatusBadge(event.status)}
+                        </td>
+                        <td className="px-6 py-4 text-gray-300 text-xs font-medium">
+                          {event.reviewed_by_username || (
+                            <span className="text-gray-500 italic">
+                              Sistema
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}

@@ -8,9 +8,9 @@ async function create(eventData) {
     const results = await database.query({
       text: `
         INSERT INTO trash_detections 
-          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, status) 
+          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, status, model_version) 
         VALUES 
-          ($1, $2, $3, $4, $5, $6, $7) 
+          ($1, $2, $3, $4, $5, $6, $7, $8) 
         RETURNING *;
       `,
       values: [
@@ -21,15 +21,15 @@ async function create(eventData) {
         data.timestamp,
         data.image_path || null,
         data.status || "pending",
+        data.model_version || "v1.0",
       ],
     });
     return results.rows[0];
   }
 }
 
-// 1. Adicionamos o status como parâmetro aceito
 async function listEvents({
-  limit = 500,
+  limit,
   material,
   days,
   minConfidence,
@@ -38,35 +38,48 @@ async function listEvents({
   const queryValues = [];
   let valueIndex = 1;
 
-  let queryText = "SELECT * FROM trash_detections WHERE 1=1";
+  let queryText = `
+    SELECT 
+      trash_detections.*, 
+      users.username as reviewed_by_username 
+    FROM trash_detections 
+    LEFT JOIN users ON trash_detections.reviewed_by = users.id 
+    WHERE 1=1
+  `;
 
   if (material) {
-    queryText += ` AND item_class = $${valueIndex}`;
+    queryText += ` AND trash_detections.item_class = $${valueIndex}`;
     queryValues.push(material);
     valueIndex++;
   }
 
   if (days) {
-    queryText += ` AND detected_at >= NOW() - $${valueIndex}::interval`;
+    queryText += ` AND trash_detections.detected_at >= NOW() - $${valueIndex}::interval`;
     queryValues.push(`${days} days`);
     valueIndex++;
   }
 
   if (minConfidence !== undefined) {
-    queryText += ` AND confidence >= $${valueIndex}`;
+    queryText += ` AND trash_detections.confidence >= $${valueIndex}`;
     queryValues.push(minConfidence);
     valueIndex++;
   }
 
-  // 2. Bloco novo: Injeta o filtro de status na SQL
   if (status) {
-    queryText += ` AND status = $${valueIndex}`;
+    queryText += ` AND trash_detections.status = $${valueIndex}`;
     queryValues.push(status);
     valueIndex++;
   }
 
-  queryText += ` ORDER BY detected_at DESC LIMIT $${valueIndex};`;
-  queryValues.push(limit);
+  queryText += ` ORDER BY trash_detections.detected_at DESC`;
+
+  if (limit !== undefined && limit !== null) {
+    queryText += ` LIMIT $${valueIndex}`;
+    queryValues.push(limit);
+    valueIndex++;
+  }
+
+  queryText += `;`;
 
   const results = await database.query({
     text: queryText,

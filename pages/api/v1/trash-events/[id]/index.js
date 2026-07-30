@@ -5,6 +5,7 @@ import controller from "infra/controller.js";
 import database from "infra/database";
 import s3Client from "infra/storage";
 import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import session from "models/session.js";
 
 const router = createRouter();
 
@@ -15,6 +16,31 @@ export default router.handler(controller.errorHandlers);
 
 async function patchHandler(request, response) {
   const { id } = request.query;
+
+  const sessionToken = request.cookies.session_id;
+  let userId = null;
+
+  if (sessionToken) {
+    try {
+      const sessionObject = await session.findOneValidByToken(sessionToken);
+      if (sessionObject) {
+        userId = sessionObject.user_id;
+      }
+    } catch (err) {
+      console.error("[Auth Error] Falha ao verificar token:", err);
+      throw new ValidationError({
+        message: "Sessão inválida ou expirada.",
+        action: "Faça login novamente para validar a imagem.",
+      });
+    }
+  }
+
+  if (!userId) {
+    throw new ValidationError({
+      message: "Usuário não autenticado.",
+      action: "Faça login para continuar.",
+    });
+  }
 
   const patchSchema = z.object({
     correctClass: z.string({
@@ -86,8 +112,8 @@ async function patchHandler(request, response) {
   );
 
   await database.query({
-    text: "UPDATE trash_detections SET status = $1, item_class = $2, image_path = $3 WHERE id = $4;",
-    values: ["validated", correctClass, newPath, id],
+    text: "UPDATE trash_detections SET status = $1, item_class = $2, image_path = $3, reviewed_by = $4 WHERE id = $5;",
+    values: ["validated", correctClass, newPath, userId, id],
   });
 
   return response.status(200).json({

@@ -13,7 +13,6 @@ router.post(postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  // 1. Recebemos o status da URL
   const { limit, material, days, min_confidence, status } = request.query;
 
   const parsedLimit = limit ? parseInt(limit, 10) : 500;
@@ -22,7 +21,6 @@ async function getHandler(request, response) {
     ? parseFloat(min_confidence)
     : undefined;
   const parsedMaterial = material !== "all" ? material : undefined;
-  // 2. Se for "all", deixamos undefined para não filtrar no banco
   const parsedStatus = status !== "all" ? status : undefined;
 
   const events = await trashEvent.listEvents({
@@ -30,7 +28,7 @@ async function getHandler(request, response) {
     material: parsedMaterial,
     days: parsedDays,
     minConfidence: parsedConfidence,
-    status: parsedStatus, // 3. Passamos para o Model
+    status: parsedStatus,
   });
 
   const totalCount = await trashEvent.countAll();
@@ -51,6 +49,7 @@ async function postHandler(request, response) {
       message:
         "O campo 'timestamp' é obrigatório e deve ser uma data válida no formato ISO 8601.",
     }),
+    model_version: z.string().optional(),
     detection: z.object(
       {
         class_name: z.string({

@@ -103,7 +103,7 @@ function Home({ isLoggedIn }) {
             "ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
           }
         >
-          {isLoggedIn ? "Acessar Painel" : "Login"}
+          Acessar Painel
         </Link>
       </header>
 

@@ -270,7 +270,7 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle>Matriz de Confusão (Heatmap)</CardTitle>
               </CardHeader>
-              <CardContent className="overflow-x-auto">
+              <CardContent className="overflow-x-auto pb-2 [scrollbar-color:#374151_#1f1f1f] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-[#1f1f1f] [&::-webkit-scrollbar-track]:rounded-lg [&::-webkit-scrollbar-thumb]:bg-[#374151] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#4b5563] transition-colors">
                 <table className="w-full text-sm text-left border-collapse">
                   <thead>
                     <tr>

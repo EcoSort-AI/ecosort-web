@@ -80,5 +80,71 @@ describe("GET /api/v1/trash-events", () => {
         expect(event.status).toBe("pending");
       });
     });
+
+    test("Filtering detections by specific reviewer (User Autoria)", async () => {
+      const userA = await orchestrator.createUser({ username: "validador_a" });
+      const userB = await orchestrator.createUser({ username: "validador_b" });
+      await orchestrator.addFeaturesToUser(userA, ["read:trash_events"]);
+      const session = await orchestrator.createSession(userA.id);
+
+      const database = (await import("infra/database.js")).default;
+
+      await database.query({
+        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, status, reviewed_by)
+               VALUES ('bin_test', 'plastic', 'plastic', 0.9, NOW(), 'validated', $1)`,
+        values: [userA.id],
+      });
+
+      await database.query({
+        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, status, reviewed_by)
+               VALUES ('bin_test', 'metal', 'metal', 0.9, NOW(), 'validated', $1)`,
+        values: [userB.id],
+      });
+
+      const response = await fetch(
+        "http://localhost:3000/api/v1/trash-events?reviewer=validador_a",
+        {
+          headers: { cookie: `session_id=${session.token}` },
+        },
+      );
+
+      const responseBody = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseBody.events.length).toBeGreaterThan(0);
+
+      responseBody.events.forEach((event) => {
+        expect(event.reviewed_by_username).toBe("validador_a");
+      });
+    });
+
+    test("Filtering detections by system (unreviewed events)", async () => {
+      const user = await orchestrator.createUser({});
+      await orchestrator.addFeaturesToUser(user, ["read:trash_events"]);
+      const session = await orchestrator.createSession(user.id);
+
+      const database = (await import("infra/database.js")).default;
+
+      await database.query({
+        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, status, reviewed_by)
+               VALUES ('bin_test', 'glass', 'glass', 0.9, NOW(), 'pending', NULL)`,
+      });
+
+      const response = await fetch(
+        "http://localhost:3000/api/v1/trash-events?reviewer=system",
+        {
+          headers: { cookie: `session_id=${session.token}` },
+        },
+      );
+
+      const responseBody = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(responseBody.events.length).toBeGreaterThan(0);
+
+      responseBody.events.forEach((event) => {
+        expect(event.reviewed_by_username).toBeNull();
+      });
+    });
   });
 });

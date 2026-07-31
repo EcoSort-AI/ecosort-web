@@ -154,7 +154,7 @@ export default function HistoryPage({
                   className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
                 >
                   <option value="all">Todos os Status</option>
-                  <option value="processed">Apenas Processados</option>
+                  <option value="validated">Apenas Validados</option>
                   <option value="pending">Aguardando Revisão</option>
                 </select>
               </div>
@@ -306,7 +306,13 @@ export default function HistoryPage({
                           {renderStatusBadge(event.status)}
                         </td>
                         <td className="px-6 py-4 text-gray-300 text-xs font-medium">
-                          {event.reviewed_by_username || (
+                          {event.reviewed_by_username ? (
+                            event.reviewed_by_username
+                          ) : event.status === "pending" ? (
+                            <span className="text-gray-500 italic">
+                              Pendente
+                            </span>
+                          ) : (
                             <span className="text-gray-500 italic">
                               Sistema
                             </span>

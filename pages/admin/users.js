@@ -162,7 +162,10 @@ export default function UsersPage({ canInvite }) {
                       return (
                         <tr
                           key={u.id}
-                          className="border-b border-[#374151] hover:bg-[#2a2a2a] transition-colors"
+                          onClick={() =>
+                            router.push(`/admin/users/${u.username}`)
+                          }
+                          className="border-b border-[#374151] hover:bg-[#2a2a2a] transition-colors cursor-pointer"
                         >
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">

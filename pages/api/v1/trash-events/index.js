@@ -13,7 +13,8 @@ router.post(postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  const { limit, material, days, min_confidence, status } = request.query;
+  const { limit, material, days, min_confidence, status, reviewer } =
+    request.query;
 
   const parsedLimit = limit ? parseInt(limit, 10) : 500;
   const parsedDays = days && days !== "all" ? parseInt(days, 10) : undefined;
@@ -23,12 +24,15 @@ async function getHandler(request, response) {
   const parsedMaterial = material !== "all" ? material : undefined;
   const parsedStatus = status !== "all" ? status : undefined;
 
+  const parsedReviewer = reviewer !== "all" ? reviewer : undefined;
+
   const events = await trashEvent.listEvents({
     limit: parsedLimit,
     material: parsedMaterial,
     days: parsedDays,
     minConfidence: parsedConfidence,
     status: parsedStatus,
+    reviewer: parsedReviewer,
   });
 
   const totalCount = await trashEvent.countAll();

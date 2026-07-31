@@ -282,7 +282,14 @@ export default function HistoryPage({
                     eventsList?.map((event) => (
                       <tr
                         key={event.id}
-                        className="border-b border-[#374151] hover:bg-[#2a2a2a] transition-colors"
+                        onClick={() => {
+                          if (event.status === "pending") {
+                            router.push("/admin/review");
+                          }
+                        }}
+                        className={`border-b border-[#374151] hover:bg-[#2a2a2a] transition-colors ${
+                          event.status === "pending" ? "cursor-pointer" : ""
+                        }`}
                       >
                         <td className="px-6 py-4 text-gray-300">
                           {formatDate(event.detected_at)}

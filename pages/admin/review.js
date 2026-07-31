@@ -74,9 +74,10 @@ export default function ReviewPage() {
       const res = await fetch("/api/v1/trash-events");
       const data = await res.json();
 
-      const pendingEvents = data.events.filter(
-        (e) => e.status === "pending" && e.image_path,
-      );
+      const pendingEvents = data.events
+        .filter((e) => e.status === "pending" && e.image_path)
+        .sort((a, b) => new Date(a.detected_at) - new Date(b.detected_at));
+
       setEvents(pendingEvents);
     } catch (error) {
       console.error("Erro ao buscar eventos:", error);

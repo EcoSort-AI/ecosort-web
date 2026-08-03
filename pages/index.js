@@ -276,7 +276,7 @@ export default function Home({ isLoggedIn }) {
                 margin: "15px 0 0 0",
                 fontSize: "4.5em",
                 fontWeight: "900",
-                color: "#eab308",
+                color: "#16a34a",
                 lineHeight: "1",
               }}
             >

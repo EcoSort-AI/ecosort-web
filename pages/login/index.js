@@ -120,7 +120,7 @@ export default function LoginPage() {
                           Senha
                         </label>
                         <Link
-                          href="#"
+                          href="/recuperar-senha"
                           className="ml-auto inline-block text-sm underline-offset-4 text-gray-400 hover:text-[#16a34a]"
                         >
                           Esqueceu a senha?

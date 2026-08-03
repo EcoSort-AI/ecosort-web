@@ -96,20 +96,27 @@ async function patchHandler(request, response) {
   const fileName = trashEvent.image_path.split("/").pop();
   const newPath = `dataset/${correctClass}/${fileName}`;
 
-  await s3Client.send(
-    new CopyObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      CopySource: `${process.env.R2_BUCKET_NAME}/${trashEvent.image_path}`,
-      Key: newPath,
-    }),
-  );
+  try {
+    await s3Client.send(
+      new CopyObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        CopySource: `${process.env.R2_BUCKET_NAME}/${trashEvent.image_path}`,
+        Key: newPath,
+      }),
+    );
 
-  await s3Client.send(
-    new DeleteObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: trashEvent.image_path,
-    }),
-  );
+    await s3Client.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: trashEvent.image_path,
+      }),
+    );
+  } catch (s3Error) {
+    console.warn(
+      "[S3 Warning] Não foi possível mover o arquivo no bucket:",
+      s3Error.message,
+    );
+  }
 
   await database.query({
     text: "UPDATE trash_detections SET status = $1, item_class = $2, image_path = $3, reviewed_by = $4 WHERE id = $5;",
@@ -117,7 +124,7 @@ async function patchHandler(request, response) {
   });
 
   return response.status(200).json({
-    message: "Imagem validada e movida com sucesso!",
+    message: "Imagem validada com sucesso!",
     newPath,
   });
 }

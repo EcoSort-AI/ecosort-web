@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useRouter } from "next/router";
 import useSWR from "swr";
 import React, { useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -22,6 +23,7 @@ import {
   Users,
   Settings,
   Trash2,
+  UserCircle,
 } from "lucide-react";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -40,6 +42,8 @@ const items = [
 ];
 
 export function AppSidebar() {
+  const router = useRouter(); // Hook para saber em qual página estamos
+
   const { data } = useSWR("/api/v1/trash-events?status=pending", fetcher, {
     refreshInterval: 5000,
   });
@@ -73,7 +77,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar
-      className="!bg-[#242424] !border-r-[#374151] !text-white"
+      className="!bg-[#242424] !border-r-[#374151] !text-white flex flex-col h-full"
       style={{ fontFamily: "sans-serif" }}
     >
       <SidebarHeader className="p-4">
@@ -92,7 +96,7 @@ export function AppSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="flex-1">
         <SidebarGroup>
           <SidebarGroupLabel className="!text-gray-400">
             Navegação Principal
@@ -104,14 +108,20 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
-                    className="hover:!bg-[#374151] hover:!text-white !text-gray-300 transition-colors"
+                    className={`hover:!bg-[#374151] hover:!text-white transition-colors ${
+                      router.pathname === item.url
+                        ? "!bg-[#374151] !text-white"
+                        : "!text-gray-300"
+                    }`}
                   >
                     <Link
                       href={item.url}
                       className="flex items-center justify-between w-full"
                     >
                       <div className="flex items-center gap-3">
-                        <item.icon className="h-4 w-4 text-[#16a34a]" />
+                        <item.icon
+                          className={`h-4 w-4 ${router.pathname === item.url ? "text-white" : "text-[#16a34a]"}`}
+                        />
                         <span>{item.title}</span>
                       </div>
 
@@ -128,6 +138,21 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+
+      <div className="mt-auto p-4 border-t border-[#374151]">
+        <Link href="/admin/profile">
+          <div
+            className={`flex items-center gap-3 p-2 rounded-md transition-colors cursor-pointer ${
+              router.pathname === "/admin/profile"
+                ? "bg-[#374151] text-white"
+                : "text-gray-400 hover:bg-[#374151] hover:text-white"
+            }`}
+          >
+            <UserCircle className="h-6 w-6" />
+            <span className="font-medium">Meu Perfil</span>
+          </div>
+        </Link>
+      </div>
     </Sidebar>
   );
 }

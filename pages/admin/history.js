@@ -30,23 +30,29 @@ import {
   Box,
   Clock,
   CheckCircle2,
+  Users,
 } from "lucide-react";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
-export default function HistoryPage({ availableClasses = [] }) {
+export default function HistoryPage({
+  availableClasses = [],
+  availableReviewers = [],
+}) {
   const router = useRouter();
 
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterMaterial, setFilterMaterial] = useState("all");
   const [filterDays, setFilterDays] = useState("all");
   const [filterConfidence, setFilterConfidence] = useState(0);
+  const [filterReviewer, setFilterReviewer] = useState("all");
 
   const queryParams = new URLSearchParams({
     status: filterStatus,
     material: filterMaterial,
     days: filterDays,
     min_confidence: filterConfidence,
+    reviewer: filterReviewer,
   }).toString();
 
   const { data, error } = useSWR(
@@ -137,7 +143,7 @@ export default function HistoryPage({ availableClasses = [] }) {
 
           {/* Filter Bar */}
           <Card className="bg-[#1f1f1f] border-[#374151] p-4 mb-6 text-white">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
               <div className="w-full">
                 <label className="text-xs font-medium text-gray-400 uppercase flex items-center gap-1 mb-2">
                   <Filter size={14} /> Status
@@ -148,7 +154,7 @@ export default function HistoryPage({ availableClasses = [] }) {
                   className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
                 >
                   <option value="all">Todos os Status</option>
-                  <option value="processed">Apenas Processados</option>
+                  <option value="validated">Apenas Validados</option>
                   <option value="pending">Aguardando Revisão</option>
                 </select>
               </div>
@@ -205,6 +211,25 @@ export default function HistoryPage({ availableClasses = [] }) {
                   <option value="0.9">Acima de 90%</option>
                 </select>
               </div>
+
+              <div className="w-full">
+                <label className="text-xs font-medium text-gray-400 uppercase flex items-center gap-1 mb-2">
+                  <Users size={14} /> Validador
+                </label>
+                <select
+                  value={filterReviewer}
+                  onChange={(e) => setFilterReviewer(e.target.value)}
+                  className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
+                >
+                  <option value="all">Qualquer usuário</option>
+                  <option value="system">Sistema / Automático</option>
+                  {availableReviewers.map((rev) => (
+                    <option key={rev} value={rev}>
+                      {rev}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </Card>
 
@@ -257,7 +282,14 @@ export default function HistoryPage({ availableClasses = [] }) {
                     eventsList?.map((event) => (
                       <tr
                         key={event.id}
-                        className="border-b border-[#374151] hover:bg-[#2a2a2a] transition-colors"
+                        onClick={() => {
+                          if (event.status === "pending") {
+                            router.push("/admin/review");
+                          }
+                        }}
+                        className={`border-b border-[#374151] hover:bg-[#2a2a2a] transition-colors ${
+                          event.status === "pending" ? "cursor-pointer" : ""
+                        }`}
                       >
                         <td className="px-6 py-4 text-gray-300">
                           {formatDate(event.detected_at)}
@@ -281,7 +313,13 @@ export default function HistoryPage({ availableClasses = [] }) {
                           {renderStatusBadge(event.status)}
                         </td>
                         <td className="px-6 py-4 text-gray-300 text-xs font-medium">
-                          {event.reviewed_by_username || (
+                          {event.reviewed_by_username ? (
+                            event.reviewed_by_username
+                          ) : event.status === "pending" ? (
+                            <span className="text-gray-500 italic">
+                              Pendente
+                            </span>
+                          ) : (
                             <span className="text-gray-500 italic">
                               Sistema
                             </span>
@@ -313,10 +351,12 @@ export async function getServerSideProps(context) {
     }
 
     const availableClasses = await trashEvent.getUniqueClasses();
+    const availableReviewers = await trashEvent.getUniqueReviewers();
 
     return {
       props: {
         availableClasses,
+        availableReviewers,
       },
     };
   } catch (error) {

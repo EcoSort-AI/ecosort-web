@@ -34,6 +34,7 @@ async function listEvents({
   days,
   minConfidence,
   status,
+  reviewer,
 } = {}) {
   const queryValues = [];
   let valueIndex = 1;
@@ -71,6 +72,16 @@ async function listEvents({
     valueIndex++;
   }
 
+  if (reviewer && reviewer !== "all") {
+    if (reviewer === "system") {
+      queryText += ` AND trash_detections.reviewed_by IS NULL`;
+    } else {
+      queryText += ` AND users.username = $${valueIndex}`;
+      queryValues.push(reviewer);
+      valueIndex++;
+    }
+  }
+
   queryText += ` ORDER BY trash_detections.detected_at DESC`;
 
   if (limit !== undefined && limit !== null) {
@@ -99,6 +110,17 @@ async function getUniqueClasses() {
   return results.rows.map((row) => row.item_class);
 }
 
+async function getUniqueReviewers() {
+  const results = await database.query(`
+    SELECT DISTINCT u.username 
+    FROM trash_detections td
+    INNER JOIN users u ON td.reviewed_by = u.id
+    WHERE td.reviewed_by IS NOT NULL 
+    ORDER BY u.username ASC;
+  `);
+  return results.rows.map((row) => row.username);
+}
+
 async function countAll() {
   const results = await database.query(
     "SELECT count(*)::int FROM trash_detections;",
@@ -111,6 +133,7 @@ const trashEvent = {
   listEvents,
   countAll,
   getUniqueClasses,
+  getUniqueReviewers,
 };
 
 export default trashEvent;

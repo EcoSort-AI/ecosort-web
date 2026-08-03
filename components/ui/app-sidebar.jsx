@@ -38,11 +38,11 @@ const items = [
   { title: "Revisões pendentes", url: "/admin/review", icon: ClipboardCheck },
   { title: "Estatísticas", url: "/admin/analytics", icon: LineChart },
   { title: "Usuários", url: "/admin/users", icon: Users },
-  { title: "Configurações", url: "#", icon: Settings },
+  { title: "Configurações", url: "/admin/settings", icon: Settings },
 ];
 
 export function AppSidebar() {
-  const router = useRouter(); // Hook para saber em qual página estamos
+  const router = useRouter();
 
   const { data } = useSWR("/api/v1/trash-events?status=pending", fetcher, {
     refreshInterval: 5000,

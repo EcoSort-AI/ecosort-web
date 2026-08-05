@@ -18,7 +18,7 @@ describe("GET /api/v1/trash-events", () => {
         bin_id: "smart_bin_01",
         timestamp: "2026-03-19T16:00:00.000Z",
         detection: {
-          class_name: "glass",
+          class_name: "plastic",
           confidence: 0.885,
         },
       };

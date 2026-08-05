@@ -1,15 +1,24 @@
 import { createRouter } from "next-connect";
 import { z } from "zod";
-import { ValidationError, NotFoundError } from "infra/errors.js";
+import {
+  ValidationError,
+  NotFoundError,
+  ForbiddenError,
+  ServiceError,
+  UnauthorizedError,
+} from "infra/errors.js";
 import controller from "infra/controller.js";
-import database from "infra/database";
-import s3Client from "infra/storage";
-import { CopyObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import database from "infra/database.js";
+import s3Client from "infra/storage.js";
+import {
+  CopyObjectCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+} from "@aws-sdk/client-s3";
 import session from "models/session.js";
 
 const router = createRouter();
 
-router.use(controller.injectAnonymousOrUser);
 router.patch(patchHandler);
 
 export default router.handler(controller.errorHandlers);
@@ -23,11 +32,8 @@ async function patchHandler(request, response) {
   if (sessionToken) {
     try {
       const sessionObject = await session.findOneValidByToken(sessionToken);
-      if (sessionObject) {
-        userId = sessionObject.user_id;
-      }
+      if (sessionObject) userId = sessionObject.user_id;
     } catch (err) {
-      console.error("[Auth Error] Falha ao verificar token:", err);
       throw new ValidationError({
         message: "Sessão inválida ou expirada.",
         action: "Faça login novamente para validar a imagem.",
@@ -36,9 +42,22 @@ async function patchHandler(request, response) {
   }
 
   if (!userId) {
-    throw new ValidationError({
+    throw new UnauthorizedError({
       message: "Usuário não autenticado.",
       action: "Faça login para continuar.",
+    });
+  }
+
+  const userResult = await database.query({
+    text: "SELECT features FROM users WHERE id = $1",
+    values: [userId],
+  });
+  const userFeatures = userResult.rows[0]?.features || [];
+
+  if (!userFeatures.includes("review:trash_detection")) {
+    throw new ForbiddenError({
+      message: "Você não tem permissão para revisar detecções.",
+      action: "Solicite a permissão de revisor ao administrador.",
     });
   }
 
@@ -53,16 +72,12 @@ async function patchHandler(request, response) {
   try {
     validatedBody = patchSchema.parse(request.body);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new ValidationError({
-        message: error.issues[0].message,
-        action: "Ajuste os dados enviados e tente novamente.",
-        cause: error,
-      });
-    }
-    throw error;
+    throw new ValidationError({
+      message: error.issues[0].message,
+      action: "Ajuste os dados enviados e tente novamente.",
+      cause: error,
+    });
   }
-
   const { correctClass } = validatedBody;
 
   const result = await database.query({
@@ -73,7 +88,6 @@ async function patchHandler(request, response) {
   if (result.rows.length === 0) {
     throw new NotFoundError({
       message: "O evento de lixo especificado não foi encontrado.",
-      action: "Verifique o ID informado e tente novamente.",
     });
   }
 
@@ -82,19 +96,18 @@ async function patchHandler(request, response) {
   if (!trashEvent.image_path) {
     throw new ValidationError({
       message: "Este evento não possui uma imagem associada para ser movida.",
-      action: "Certifique-se de que o evento foi registrado com uma imagem.",
     });
   }
 
-  if (trashEvent.status === "validated") {
-    throw new ValidationError({
+  if (trashEvent.status !== "pending") {
+    // Controller lida diretamente com o erro de concorrência com status 409
+    return response.status(409).json({
+      name: "ConcurrencyError",
       message: "Esta imagem já foi validada anteriormente.",
-      action: "Nenhuma ação adicional é necessária para este evento.",
     });
   }
 
-  const fileName = trashEvent.image_path.split("/").pop();
-  const newPath = `dataset/${correctClass}/${fileName}`;
+  const newPath = `dataset/${correctClass}/${id}.jpg`;
 
   try {
     await s3Client.send(
@@ -106,22 +119,48 @@ async function patchHandler(request, response) {
     );
 
     await s3Client.send(
+      new HeadObjectCommand({
+        Bucket: process.env.R2_BUCKET_NAME,
+        Key: newPath,
+      }),
+    );
+  } catch (s3Error) {
+    throw new ServiceError({
+      message: "Falha ao copiar a imagem no Cloudflare R2.",
+      cause: s3Error,
+    });
+  }
+
+  const updateResult = await database.query({
+    text: `
+      UPDATE trash_detections 
+      SET status = 'validated', item_class = $1, image_path = $2, reviewed_by = $3
+      WHERE id = $4 AND status = 'pending' 
+      RETURNING *;
+    `,
+    values: [correctClass, newPath, userId, id],
+  });
+
+  if (updateResult.rowCount === 0) {
+    return response.status(409).json({
+      name: "ConcurrencyError",
+      message: "Este item já foi revisado por outro usuário.",
+    });
+  }
+
+  try {
+    await s3Client.send(
       new DeleteObjectCommand({
         Bucket: process.env.R2_BUCKET_NAME,
         Key: trashEvent.image_path,
       }),
     );
-  } catch (s3Error) {
+  } catch (deleteError) {
     console.warn(
-      "[S3 Warning] Não foi possível mover o arquivo no bucket:",
-      s3Error.message,
+      "[S3 Warning] Cópia e banco confirmados, mas falha ao excluir original:",
+      deleteError.message,
     );
   }
-
-  await database.query({
-    text: "UPDATE trash_detections SET status = $1, item_class = $2, image_path = $3, reviewed_by = $4 WHERE id = $5;",
-    values: ["validated", correctClass, newPath, userId, id],
-  });
 
   return response.status(200).json({
     message: "Imagem validada com sucesso!",

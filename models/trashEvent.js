@@ -1,6 +1,30 @@
 import database from "infra/database.js";
 
+const VALID_WASTE_CLASSES = [
+  "white-glass",
+  "brown-glass",
+  "green-glass",
+  "cardboard",
+  "plastic",
+  "metal",
+  "paper",
+  "biological",
+  "trash",
+];
+
+function isValidClass(className) {
+  return VALID_WASTE_CLASSES.includes(className);
+}
+
 async function create(eventData) {
+  if (!isValidClass(eventData.detection.class_name)) {
+    const error = new Error(
+      `Classe inválida: ${eventData.detection.class_name}`,
+    );
+    error.name = "ValidationError";
+    throw error;
+  }
+
   const newEvent = await runInsertQuery(eventData);
   return newEvent;
 
@@ -20,12 +44,45 @@ async function create(eventData) {
         data.detection.confidence,
         data.timestamp,
         data.image_path || null,
-        data.status || "pending",
-        data.model_version || "v1.0.0",
+        "pending",
+        data.model_version || "unknown",
       ],
     });
     return results.rows[0];
   }
+}
+
+async function review(eventId, validatedClass, reviewerId) {
+  if (!isValidClass(validatedClass)) {
+    const error = new Error(`Classe validada inválida: ${validatedClass}`);
+    error.name = "ValidationError";
+    throw error;
+  }
+
+  const query = {
+    text: `
+      UPDATE trash_detections 
+      SET 
+        status = 'validated', 
+        item_class = $1, 
+        reviewed_by = $2
+      WHERE id = $3 AND status = 'pending'
+      RETURNING *;
+    `,
+    values: [validatedClass, reviewerId, eventId],
+  };
+
+  const result = await database.query(query);
+
+  if (result.rowCount === 0) {
+    const error = new Error(
+      "Este item já foi revisado por outro usuário ou não existe.",
+    );
+    error.name = "ConcurrencyError";
+    throw error;
+  }
+
+  return result.rows[0];
 }
 
 async function listEvents({
@@ -130,10 +187,12 @@ async function countAll() {
 
 const trashEvent = {
   create,
+  review,
   listEvents,
   countAll,
   getUniqueClasses,
   getUniqueReviewers,
+  VALID_WASTE_CLASSES,
 };
 
 export default trashEvent;

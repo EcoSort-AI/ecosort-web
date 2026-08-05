@@ -32,9 +32,9 @@ async function create(eventData) {
     const results = await database.query({
       text: `
         INSERT INTO trash_detections 
-          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, status, model_version) 
+          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, review_status, storage_status, dataset_status, model_version) 
         VALUES 
-          ($1, $2, $3, $4, $5, $6, $7, $8) 
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
         RETURNING *;
       `,
       values: [
@@ -44,6 +44,8 @@ async function create(eventData) {
         data.detection.confidence,
         data.timestamp,
         data.image_path || null,
+        "pending",
+        "pending",
         "pending",
         data.model_version || "unknown",
       ],
@@ -63,10 +65,11 @@ async function review(eventId, validatedClass, reviewerId) {
     text: `
       UPDATE trash_detections 
       SET 
-        status = 'validated', 
+        review_status = 'approved',
+        dataset_status = 'eligible',
         item_class = $1, 
         reviewed_by = $2
-      WHERE id = $3 AND status = 'pending'
+      WHERE id = $3 AND review_status = 'pending'
       RETURNING *;
     `,
     values: [validatedClass, reviewerId, eventId],
@@ -124,7 +127,7 @@ async function listEvents({
   }
 
   if (status) {
-    queryText += ` AND trash_detections.status = $${valueIndex}`;
+    queryText += ` AND trash_detections.review_status = $${valueIndex}`;
     queryValues.push(status);
     valueIndex++;
   }

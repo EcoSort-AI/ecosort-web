@@ -1,4 +1,3 @@
-// tests/integration/api/v1/trash-events/patch.test.js
 import orchestrator from "tests/orchestrator.js";
 import trashEvent from "models/trashEvent.js";
 import database from "infra/database.js";
@@ -37,13 +36,15 @@ describe("PATCH /api/v1/trash-events/[id]", () => {
     expect(response.status).toBe(200);
 
     const dbResult = await database.query({
-      text: "SELECT status, item_class, reviewed_by FROM trash_detections WHERE id = $1",
+      text: "SELECT review_status, storage_status, dataset_status, item_class, reviewed_by FROM trash_detections WHERE id = $1",
       values: [eventData.id],
     });
 
     const updatedEvent = dbResult.rows[0];
 
-    expect(updatedEvent.status).toBe("validated");
+    expect(updatedEvent.review_status).toBe("approved");
+    expect(updatedEvent.storage_status).toBe("stored");
+    expect(updatedEvent.dataset_status).toBe("eligible");
     expect(updatedEvent.item_class).toBe("cardboard");
     expect(updatedEvent.reviewed_by).toBe(user.id);
   });

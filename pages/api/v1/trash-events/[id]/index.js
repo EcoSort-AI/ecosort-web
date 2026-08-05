@@ -33,7 +33,7 @@ async function patchHandler(request, response) {
     try {
       const sessionObject = await session.findOneValidByToken(sessionToken);
       if (sessionObject) userId = sessionObject.user_id;
-    } catch (err) {
+    } catch (error) {
       throw new ValidationError({
         message: "Sessão inválida ou expirada.",
         action: "Faça login novamente para validar a imagem.",
@@ -81,7 +81,7 @@ async function patchHandler(request, response) {
   const { correctClass } = validatedBody;
 
   const result = await database.query({
-    text: "SELECT image_path, status FROM trash_detections WHERE id = $1;",
+    text: "SELECT image_path, review_status FROM trash_detections WHERE id = $1;",
     values: [id],
   });
 
@@ -99,8 +99,7 @@ async function patchHandler(request, response) {
     });
   }
 
-  if (trashEvent.status !== "pending") {
-    // Controller lida diretamente com o erro de concorrência com status 409
+  if (trashEvent.review_status !== "pending") {
     return response.status(409).json({
       name: "ConcurrencyError",
       message: "Esta imagem já foi validada anteriormente.",
@@ -134,8 +133,14 @@ async function patchHandler(request, response) {
   const updateResult = await database.query({
     text: `
       UPDATE trash_detections 
-      SET status = 'validated', item_class = $1, image_path = $2, reviewed_by = $3
-      WHERE id = $4 AND status = 'pending' 
+      SET 
+        review_status = 'approved',
+        storage_status = 'stored',
+        dataset_status = 'eligible',
+        item_class = $1, 
+        image_path = $2, 
+        reviewed_by = $3
+      WHERE id = $4 AND review_status = 'pending' 
       RETURNING *;
     `,
     values: [correctClass, newPath, userId, id],

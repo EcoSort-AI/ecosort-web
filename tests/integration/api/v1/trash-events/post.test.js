@@ -38,7 +38,9 @@ describe("POST to /api/v1/trash-events", () => {
       expect(responseBody.bin_id).toBe("smart_bin_01");
       expect(responseBody.item_class).toBe("plastic");
       expect(responseBody.confidence).toBeCloseTo(0.932);
-      expect(responseBody.status).toBe("pending");
+      expect(responseBody.review_status).toBe("pending");
+      expect(responseBody.storage_status).toBe("pending");
+      expect(responseBody.dataset_status).toBe("pending");
     });
 
     test("Should reject request without Bearer token", async () => {

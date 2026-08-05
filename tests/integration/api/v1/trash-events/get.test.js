@@ -51,14 +51,12 @@ describe("GET /api/v1/trash-events", () => {
         bin_id: "test_bin_pending",
         timestamp: new Date().toISOString(),
         detection: { class_name: "plastic", confidence: 0.9 },
-        status: "pending",
       });
 
       await trashEvent.create({
         bin_id: "test_bin_processed",
         timestamp: new Date().toISOString(),
         detection: { class_name: "metal", confidence: 0.9 },
-        status: "processed",
       });
 
       const response = await fetch(
@@ -77,7 +75,7 @@ describe("GET /api/v1/trash-events", () => {
       expect(responseBody.events.length).toBeGreaterThan(0);
 
       responseBody.events.forEach((event) => {
-        expect(event.status).toBe("pending");
+        expect(event.review_status).toBe("pending");
       });
     });
 
@@ -90,14 +88,14 @@ describe("GET /api/v1/trash-events", () => {
       const database = (await import("infra/database.js")).default;
 
       await database.query({
-        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, status, reviewed_by)
-               VALUES ('bin_test', 'plastic', 'plastic', 0.9, NOW(), 'validated', $1)`,
+        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, review_status, storage_status, dataset_status, reviewed_by)
+               VALUES ('bin_test', 'plastic', 'plastic', 0.9, NOW(), 'approved', 'stored', 'eligible', $1)`,
         values: [userA.id],
       });
 
       await database.query({
-        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, status, reviewed_by)
-               VALUES ('bin_test', 'metal', 'metal', 0.9, NOW(), 'validated', $1)`,
+        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, review_status, storage_status, dataset_status, reviewed_by)
+               VALUES ('bin_test', 'metal', 'metal', 0.9, NOW(), 'approved', 'stored', 'eligible', $1)`,
         values: [userB.id],
       });
 
@@ -126,8 +124,8 @@ describe("GET /api/v1/trash-events", () => {
       const database = (await import("infra/database.js")).default;
 
       await database.query({
-        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, status, reviewed_by)
-               VALUES ('bin_test', 'glass', 'glass', 0.9, NOW(), 'pending', NULL)`,
+        text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, review_status, storage_status, dataset_status, reviewed_by)
+               VALUES ('bin_test', 'glass', 'glass', 0.9, NOW(), 'pending', 'pending', 'pending', NULL)`,
       });
 
       const response = await fetch(

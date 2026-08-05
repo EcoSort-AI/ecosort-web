@@ -37,6 +37,7 @@ async function patchHandler(request, response) {
       throw new ValidationError({
         message: "Sessão inválida ou expirada.",
         action: "Faça login novamente para validar a imagem.",
+        cause: error,
       });
     }
   }
@@ -139,7 +140,10 @@ async function patchHandler(request, response) {
         dataset_status = 'eligible',
         item_class = $1, 
         image_path = $2, 
-        reviewed_by = $3
+        reviewed_by = $3,
+        updated_at = NOW(),
+        reviewed_at = NOW(),
+        stored_at = NOW()
       WHERE id = $4 AND review_status = 'pending' 
       RETURNING *;
     `,

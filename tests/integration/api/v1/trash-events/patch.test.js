@@ -36,7 +36,7 @@ describe("PATCH /api/v1/trash-events/[id]", () => {
     expect(response.status).toBe(200);
 
     const dbResult = await database.query({
-      text: "SELECT review_status, storage_status, dataset_status, item_class, reviewed_by FROM trash_detections WHERE id = $1",
+      text: "SELECT review_status, storage_status, dataset_status, item_class, reviewed_by, reviewed_at, stored_at FROM trash_detections WHERE id = $1",
       values: [eventData.id],
     });
 
@@ -47,6 +47,11 @@ describe("PATCH /api/v1/trash-events/[id]", () => {
     expect(updatedEvent.dataset_status).toBe("eligible");
     expect(updatedEvent.item_class).toBe("cardboard");
     expect(updatedEvent.reviewed_by).toBe(user.id);
+
+    expect(updatedEvent.reviewed_at).not.toBeNull();
+    expect(updatedEvent.reviewed_at instanceof Date).toBe(true);
+    expect(updatedEvent.stored_at).not.toBeNull();
+    expect(updatedEvent.stored_at instanceof Date).toBe(true);
   });
 
   test("Should return 409 Conflict when attempting to review an item that has already been reviewed (Concurrency)", async () => {

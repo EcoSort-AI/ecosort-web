@@ -1,13 +1,21 @@
 import { createRouter } from "next-connect";
 import { z } from "zod";
-import { ValidationError } from "infra/errors.js";
+import {
+  ValidationError,
+  UnauthorizedError,
+  ForbiddenError,
+} from "infra/errors.js";
 import controller from "infra/controller.js";
 import trashEvent from "models/trashEvent.js";
 
 const router = createRouter();
 
-router.use(controller.injectAnonymousOrUser);
-router.get(controller.canRequest("read:trash_events"), getHandler);
+router.get(
+  controller.injectAnonymousOrUser,
+  controller.canRequest("read:trash_events"),
+  getHandler,
+);
+
 router.post(postHandler);
 
 export default router.handler(controller.errorHandlers);
@@ -23,7 +31,6 @@ async function getHandler(request, response) {
     : undefined;
   const parsedMaterial = material !== "all" ? material : undefined;
   const parsedStatus = status !== "all" ? status : undefined;
-
   const parsedReviewer = reviewer !== "all" ? reviewer : undefined;
 
   const events = await trashEvent.listEvents({
@@ -44,6 +51,16 @@ async function getHandler(request, response) {
 }
 
 async function postHandler(request, response) {
+  const authHeader = request.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    throw new UnauthorizedError({
+      message: "Autenticação de dispositivo ausente ou inválida.",
+      action: "O dispositivo deve enviar um token Bearer válido.",
+    });
+  }
+
+  const deviceToken = authHeader.split(" ")[1];
+
   const trashEventSchema = z.object({
     bin_id: z.string({
       required_error: "O campo 'bin_id' é obrigatório.",
@@ -70,21 +87,27 @@ async function postHandler(request, response) {
       { required_error: "O objeto 'detection' é obrigatório." },
     ),
     image_path: z.string().optional(),
-    status: z.string().optional(),
   });
 
+  let validatedBody;
   try {
-    const validatedBody = trashEventSchema.parse(request.body);
-    const newEvent = await trashEvent.create(validatedBody);
-    return response.status(201).json(newEvent);
+    validatedBody = trashEventSchema.parse(request.body);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      throw new ValidationError({
-        message: error.issues[0].message,
-        action: "Ajuste os dados enviados e tente novamente.",
-        cause: error,
-      });
-    }
-    throw error;
+    throw new ValidationError({
+      message: error.issues[0].message,
+      action: "Ajuste os dados enviados e tente novamente.",
+      cause: error,
+    });
   }
+
+  const expectedToken = `ecotoken_${validatedBody.bin_id}`;
+  if (deviceToken !== expectedToken) {
+    throw new ForbiddenError({
+      message: "Token revogado ou não pertence a esta lixeira.",
+      action: "Verifique as credenciais configuradas no dispositivo.",
+    });
+  }
+
+  const newEvent = await trashEvent.create(validatedBody);
+  return response.status(201).json(newEvent);
 }

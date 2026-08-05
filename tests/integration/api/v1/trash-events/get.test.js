@@ -144,5 +144,56 @@ describe("GET /api/v1/trash-events", () => {
         expect(event.reviewed_by_username).toBeNull();
       });
     });
+
+    test("Paginating detections correctly (page and limit)", async () => {
+      const user = await orchestrator.createUser({});
+      await orchestrator.addFeaturesToUser(user, ["read:trash_events"]);
+      const session = await orchestrator.createSession(user.id);
+
+      const database = (await import("infra/database.js")).default;
+
+      await database.query("DELETE FROM trash_detections;");
+
+      for (let i = 1; i <= 5; i++) {
+        await database.query({
+          text: `INSERT INTO trash_detections (bin_id, item_class, confidence, detected_at, review_status)
+                 VALUES ('bin_page_test', 'plastic', 0.9, NOW() - $1::interval, 'pending')`,
+          values: [`${i} hours`],
+        });
+      }
+
+      const responsePage1 = await fetch(
+        "http://localhost:3000/api/v1/trash-events?page=1&limit=2",
+        { headers: { cookie: `session_id=${session.token}` } },
+      );
+      const bodyPage1 = await responsePage1.json();
+
+      expect(responsePage1.status).toBe(200);
+      expect(bodyPage1.events.length).toBe(2);
+      expect(bodyPage1.pagination.page).toBe(1);
+      expect(bodyPage1.pagination.limit).toBe(2);
+      expect(bodyPage1.pagination.total_records).toBe(5);
+      expect(bodyPage1.pagination.total_pages).toBe(3);
+
+      const responsePage2 = await fetch(
+        "http://localhost:3000/api/v1/trash-events?page=2&limit=2",
+        { headers: { cookie: `session_id=${session.token}` } },
+      );
+      const bodyPage2 = await responsePage2.json();
+
+      expect(bodyPage2.events.length).toBe(2);
+      expect(bodyPage2.pagination.page).toBe(2);
+
+      expect(bodyPage1.events[0].id).not.toBe(bodyPage2.events[0].id);
+
+      const responsePage3 = await fetch(
+        "http://localhost:3000/api/v1/trash-events?page=3&limit=2",
+        { headers: { cookie: `session_id=${session.token}` } },
+      );
+      const bodyPage3 = await responsePage3.json();
+
+      expect(bodyPage3.events.length).toBe(1);
+      expect(bodyPage3.pagination.page).toBe(3);
+    });
   });
 });

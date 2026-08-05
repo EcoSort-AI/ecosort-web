@@ -21,10 +21,15 @@ router.post(postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  const { limit, material, days, min_confidence, status, reviewer } =
+  const { limit, material, days, min_confidence, status, reviewer, page } =
     request.query;
 
-  const parsedLimit = limit ? parseInt(limit, 10) : 500;
+  const parsedPage = page ? parseInt(page, 10) : 1;
+  const validPage = isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
+
+  const parsedLimit = limit ? parseInt(limit, 10) : 20;
+  const validLimit = isNaN(parsedLimit) || parsedLimit < 1 ? 20 : parsedLimit;
+
   const parsedDays = days && days !== "all" ? parseInt(days, 10) : undefined;
   const parsedConfidence = min_confidence
     ? parseFloat(min_confidence)
@@ -34,7 +39,8 @@ async function getHandler(request, response) {
   const parsedReviewer = reviewer !== "all" ? reviewer : undefined;
 
   const events = await trashEvent.listEvents({
-    limit: parsedLimit,
+    page: validPage,
+    limit: validLimit,
     material: parsedMaterial,
     days: parsedDays,
     minConfidence: parsedConfidence,
@@ -42,11 +48,17 @@ async function getHandler(request, response) {
     reviewer: parsedReviewer,
   });
 
-  const totalCount = await trashEvent.countAll();
+  const totalCount = parseInt(await trashEvent.countAll(), 10) || 0;
 
   return response.status(200).json({
     total: totalCount,
     events: events,
+    pagination: {
+      page: validPage,
+      limit: validLimit,
+      total_records: totalCount,
+      total_pages: Math.ceil(totalCount / validLimit),
+    },
   });
 }
 

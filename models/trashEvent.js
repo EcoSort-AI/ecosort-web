@@ -92,7 +92,8 @@ async function review(eventId, validatedClass, reviewerId) {
 }
 
 async function listEvents({
-  limit,
+  limit = 20,
+  page = 1,
   material,
   days,
   minConfidence,
@@ -147,11 +148,11 @@ async function listEvents({
 
   queryText += ` ORDER BY trash_detections.detected_at DESC`;
 
-  if (limit !== undefined && limit !== null) {
-    queryText += ` LIMIT $${valueIndex}`;
-    queryValues.push(limit);
-    valueIndex++;
-  }
+  const offset = (page - 1) * limit;
+
+  queryText += ` LIMIT $${valueIndex} OFFSET $${valueIndex + 1}`;
+  queryValues.push(limit, offset);
+  valueIndex += 2;
 
   queryText += `;`;
 

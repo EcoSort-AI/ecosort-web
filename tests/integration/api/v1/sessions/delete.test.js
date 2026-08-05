@@ -82,7 +82,6 @@ describe("DELETE /api/v1/sessions", () => {
 
       expect(responseBody).toEqual({
         id: sessionObject.id,
-        token: sessionObject.token,
         user_id: sessionObject.user_id,
         expires_at: responseBody.expires_at,
         created_at: responseBody.created_at,

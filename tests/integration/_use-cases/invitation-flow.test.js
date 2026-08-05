@@ -15,6 +15,7 @@ describe("Use case: Invitation Flow (all successful)", () => {
   let invitedUserId;
   let activationTokenId;
   let newSessionResponseBody;
+  let sessionToken;
 
   const invitedEmail = "convidado.flow@ecosort.com";
   const newPassword = "NovaSenhaSegura123";
@@ -113,6 +114,10 @@ describe("Use case: Invitation Flow (all successful)", () => {
       },
     );
 
+    const setCookieHeader = createSessionsResponse.headers.get("set-cookie");
+    const sessionTokenMatch = setCookieHeader.match(/session_id=([^;]+)/);
+    sessionToken = sessionTokenMatch ? sessionTokenMatch[1] : null;
+
     expect(createSessionsResponse.status).toBe(201);
 
     newSessionResponseBody = await createSessionsResponse.json();
@@ -122,7 +127,7 @@ describe("Use case: Invitation Flow (all successful)", () => {
   test("Get user information", async () => {
     const userResponse = await fetch("http://localhost:3000/api/v1/user", {
       headers: {
-        cookie: `session_id=${newSessionResponseBody.token}`,
+        cookie: `session_id=${sessionToken}`,
       },
     });
 

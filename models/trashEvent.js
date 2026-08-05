@@ -32,9 +32,11 @@ async function create(eventData) {
     const results = await database.query({
       text: `
         INSERT INTO trash_detections 
-          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, review_status, storage_status, dataset_status, model_version) 
+          (bin_id, item_class, ai_prediction, confidence, detected_at, image_path, review_status, storage_status, dataset_status, model_version, source_event_id) 
         VALUES 
-          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+          ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        ON CONFLICT (source_event_id) 
+        DO UPDATE SET updated_at = NOW()
         RETURNING *;
       `,
       values: [
@@ -48,6 +50,7 @@ async function create(eventData) {
         "pending",
         "pending",
         data.model_version || "unknown",
+        data.source_event_id || null,
       ],
     });
     return results.rows[0];

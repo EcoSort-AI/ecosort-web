@@ -66,6 +66,12 @@ async function postHandler(request, response) {
       required_error: "O campo 'bin_id' é obrigatório.",
       invalid_type_error: "O campo 'bin_id' deve ser um texto.",
     }),
+    source_event_id: z
+      .string({
+        invalid_type_error: "O campo 'source_event_id' deve ser um texto.",
+      })
+      .uuid({ message: "O campo 'source_event_id' deve ser um UUID válido." })
+      .optional(),
     timestamp: z.iso.datetime({
       message:
         "O campo 'timestamp' é obrigatório e deve ser uma data válida no formato ISO 8601.",

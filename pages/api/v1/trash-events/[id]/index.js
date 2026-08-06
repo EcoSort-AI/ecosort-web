@@ -63,10 +63,24 @@ async function patchHandler(request, response) {
   }
 
   const patchSchema = z.object({
-    correctClass: z.string({
-      required_error: "O campo 'correctClass' é obrigatório.",
-      invalid_type_error: "O campo 'correctClass' deve ser um texto.",
-    }),
+    correctClass: z.enum(
+      [
+        "plastic",
+        "metal",
+        "white-glass",
+        "brown-glass",
+        "green-glass",
+        "paper",
+        "cardboard",
+        "biological",
+        "trash",
+        "invalid_image",
+      ],
+      {
+        required_error: "A classe corrigida é obrigatória.",
+        invalid_type_error: "Classe de resíduo inválida.",
+      },
+    ),
   });
 
   let validatedBody;

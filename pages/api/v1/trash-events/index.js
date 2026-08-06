@@ -91,9 +91,24 @@ async function postHandler(request, response) {
     model_version: z.string().optional(),
     detection: z.object(
       {
-        class_name: z.string({
-          required_error: "O campo 'class_name' é obrigatório.",
-        }),
+        class_name: z.enum(
+          [
+            "plastic",
+            "metal",
+            "white-glass",
+            "brown-glass",
+            "green-glass",
+            "paper",
+            "cardboard",
+            "biological",
+            "trash",
+          ],
+          {
+            required_error: "O campo 'class_name' é obrigatório.",
+            invalid_type_error:
+              "Classe de resíduo não reconhecida. Utilize as classes oficiais (ex: 'plastic', 'metal').",
+          },
+        ),
         confidence: z
           .number({
             required_error: "O campo 'confidence' é obrigatório.",

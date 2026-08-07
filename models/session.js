@@ -5,11 +5,15 @@ import { UnauthorizedError } from "infra/errors.js";
 const EXPIRATION_IN_MILLISECONDS = 60 * 60 * 24 * 30 * 1000; // 30 days
 
 async function findOneValidByToken(sessionToken) {
-  const sessionFound = await runSelectQuery(sessionToken);
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(sessionToken)
+    .digest("hex");
+  const sessionFound = await runSelectQuery(tokenHash);
 
   return sessionFound;
 
-  async function runSelectQuery(sessionToken) {
+  async function runSelectQuery(hash) {
     const results = await database.query({
       text: `
       SELECT
@@ -22,7 +26,7 @@ async function findOneValidByToken(sessionToken) {
       LIMIT
         1
       ;`,
-      values: [sessionToken],
+      values: [hash],
     });
 
     if (results.rowCount === 0) {
@@ -36,13 +40,17 @@ async function findOneValidByToken(sessionToken) {
 }
 
 async function create(userId) {
-  const token = crypto.randomBytes(48).toString("hex");
+  const rawToken = crypto.randomBytes(48).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
   const expiresAt = new Date(Date.now() + EXPIRATION_IN_MILLISECONDS);
 
-  const newSession = await runInsertQuery(token, userId, expiresAt);
+  const newSession = await runInsertQuery(tokenHash, userId, expiresAt);
+
+  newSession.token = rawToken;
   return newSession;
 
-  async function runInsertQuery(token, userId, expiresAt) {
+  async function runInsertQuery(hash, userId, expiresAt) {
     const results = await database.query({
       text: `
       INSERT INTO
@@ -52,7 +60,7 @@ async function create(userId) {
       RETURNING
         *
       ;`,
-      values: [token, userId, expiresAt],
+      values: [hash, userId, expiresAt],
     });
 
     return results.rows[0];
@@ -60,25 +68,23 @@ async function create(userId) {
 }
 
 async function renew(sessionId) {
-  const expiresAt = new Date(Date.now() + EXPIRATION_IN_MILLISECONDS);
-
-  const renewedSessionObject = await runUpdateQuery(sessionId, expiresAt);
+  const renewedSessionObject = await runUpdateQuery(sessionId);
   return renewedSessionObject;
 
-  async function runUpdateQuery(sessionId, expiresAt) {
+  async function runUpdateQuery(sessionId) {
     const results = await database.query({
       text: `
       UPDATE
         sessions
       SET
-        expires_at = $2,
+        expires_at = NOW() + interval '30 days',
         updated_at = NOW()
       WHERE
         id = $1
       RETURNING
         *
       ;`,
-      values: [sessionId, expiresAt],
+      values: [sessionId],
     });
 
     return results.rows[0];

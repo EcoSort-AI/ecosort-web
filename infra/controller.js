@@ -2,33 +2,30 @@ import * as cookie from "cookie";
 import session from "models/session.js";
 import user from "models/user.js";
 import authorization from "models/authorization.js";
-import {
-  InternalServerError,
-  MethodNotAllowedError,
-  ServiceError,
-  ValidationError,
-  NotFoundError,
-  UnauthorizedError,
-  ForbiddenError,
-} from "infra/errors";
+import { InternalServerError } from "infra/errors.js";
 
 function onNoMatchHandler(request, response) {
-  const publicErrorObject = new MethodNotAllowedError();
-  response.status(publicErrorObject.statusCode).json(publicErrorObject);
+  return response.status(405).json({
+    name: "MethodNotAllowedError",
+    message: "Método não permitido para esse endpoint.",
+    action: "Verifique se o método HTTP enviado é válido para esse endpoint.",
+    status_code: 405,
+  });
 }
 
 function onErrorHandler(error, request, response) {
   if (
-    error instanceof ValidationError ||
-    error instanceof NotFoundError ||
-    error instanceof ForbiddenError ||
-    error instanceof ServiceError
+    error.name === "ValidationError" ||
+    error.name === "NotFoundError" ||
+    error.name === "ForbiddenError" ||
+    error.name === "ServiceError"
   ) {
-    return response.status(error.statusCode).json(error);
+    return response.status(error.statusCode || 400).json(error);
   }
-  if (error instanceof UnauthorizedError) {
+
+  if (error.name === "UnauthorizedError") {
     clearSessionCookie(response);
-    return response.status(error.statusCode).json(error);
+    return response.status(error.statusCode || 401).json(error);
   }
 
   const publicErrorObject = new InternalServerError({
@@ -37,26 +34,28 @@ function onErrorHandler(error, request, response) {
 
   console.error(publicErrorObject);
 
-  response.status(publicErrorObject.statusCode).json(publicErrorObject);
+  response.status(publicErrorObject.statusCode || 500).json(publicErrorObject);
 }
 
-async function setSessionCookie(sessionToken, response) {
+function setSessionCookie(sessionToken, response) {
   const setCookie = cookie.serialize("session_id", sessionToken, {
     path: "/",
     maxAge: session.EXPIRATION_IN_MILLISECONDS / 1000,
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
+    sameSite: "lax",
   });
 
   response.setHeader("Set-Cookie", setCookie);
 }
 
-async function clearSessionCookie(response) {
+function clearSessionCookie(response) {
   const setCookie = cookie.serialize("session_id", "invalid", {
     path: "/",
     maxAge: -1,
     secure: process.env.NODE_ENV === "production",
     httpOnly: true,
+    sameSite: "lax",
   });
 
   response.setHeader("Set-Cookie", setCookie);
@@ -85,7 +84,13 @@ async function injectAuthenticatedUser(request) {
 
 function injectAnonymousUser(request) {
   const anonymousUserObject = {
-    features: ["read:activation_token", "create:session"], //retirei o "create:user"
+    features: [
+      "read:activation_token",
+      "create:session",
+      "read:status",
+      "create:user",
+      "read:user",
+    ],
   };
 
   request.context = {
@@ -96,15 +101,26 @@ function injectAnonymousUser(request) {
 
 function canRequest(feature) {
   return function canRequestMiddleware(request, response, next) {
-    const userTryingToRequest = request.context.user;
+    const userTryingToRequest = request.context?.user;
+
+    if (!userTryingToRequest) {
+      return response.status(401).json({
+        name: "UnauthorizedError",
+        message: "Usuário não possui sessão ativa.",
+        action: "Verifique se este usuário está logado e tente novamente.",
+        status_code: 401,
+      });
+    }
 
     if (authorization.can(userTryingToRequest, feature)) {
       return next();
     }
 
-    throw new ForbiddenError({
+    return response.status(403).json({
+      name: "ForbiddenError",
       message: "Você não possui permissão para executar esta ação.",
       action: `Verifique se o seu usuário possui a feature "${feature}"`,
+      status_code: 403,
     });
   };
 }

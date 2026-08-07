@@ -112,9 +112,13 @@ export default function AdminDashboard() {
     setIsMounted(true);
   }, []);
 
-  const { data: apiData, error } = useSWR("/api/v1/trash-events", fetcher, {
-    refreshInterval: 5000,
-  });
+  const { data: apiData, error } = useSWR(
+    "/api/v1/trash-events?limit=1000",
+    fetcher,
+    {
+      refreshInterval: 5000,
+    },
+  );
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -169,7 +173,7 @@ export default function AdminDashboard() {
     rawData.forEach((item) => {
       totalConfidence += item.confidence;
 
-      if (item.status === "pending") {
+      if (item.review_status === "pending" && item.image_path) {
         pendingReviewsCount++;
       }
 

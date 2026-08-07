@@ -21,6 +21,7 @@ describe("GET /api/v1/trash-events", () => {
           class_name: "plastic",
           confidence: 0.885,
         },
+        image_path: "pending/test-mock-image.jpg",
       };
       await trashEvent.create(payload);
       const response = await fetch(

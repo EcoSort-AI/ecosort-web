@@ -29,6 +29,10 @@ async function create(eventData) {
   return newEvent;
 
   async function runInsertQuery(data) {
+    const initialReviewStatus = data.image_path ? "pending" : "approved";
+    const initialStorageStatus = data.image_path ? "pending" : "ignored";
+    const initialDatasetStatus = data.image_path ? "pending" : "ignored";
+
     const results = await database.query({
       text: `
         INSERT INTO trash_detections 
@@ -46,9 +50,9 @@ async function create(eventData) {
         data.detection.confidence,
         data.timestamp,
         data.image_path || null,
-        "pending",
-        "pending",
-        "pending",
+        initialReviewStatus,
+        initialStorageStatus,
+        initialDatasetStatus,
         data.model_version || "unknown",
         data.source_event_id || null,
       ],
@@ -99,6 +103,7 @@ async function listEvents({
   minConfidence,
   status,
   reviewer,
+  hasImage,
 } = {}) {
   const queryValues = [];
   let valueIndex = 1;
@@ -134,6 +139,10 @@ async function listEvents({
     queryText += ` AND trash_detections.review_status = $${valueIndex}`;
     queryValues.push(status);
     valueIndex++;
+  }
+
+  if (hasImage) {
+    queryText += ` AND trash_detections.image_path IS NOT NULL`;
   }
 
   if (reviewer && reviewer !== "all") {
@@ -185,11 +194,68 @@ async function getUniqueReviewers() {
   return results.rows.map((row) => row.username);
 }
 
-async function countAll() {
-  const results = await database.query(
-    "SELECT count(*)::int FROM trash_detections;",
-  );
-  return results.rows[0].count;
+async function countAll({
+  status,
+  material,
+  days,
+  minConfidence,
+  reviewer,
+  hasImage,
+} = {}) {
+  const queryValues = [];
+  let valueIndex = 1;
+
+  let queryText = `
+    SELECT COUNT(*) 
+    FROM trash_detections 
+    LEFT JOIN users ON trash_detections.reviewed_by = users.id 
+    WHERE 1=1
+  `;
+
+  if (material) {
+    queryText += ` AND trash_detections.item_class = $${valueIndex}`;
+    queryValues.push(material);
+    valueIndex++;
+  }
+
+  if (days) {
+    queryText += ` AND trash_detections.detected_at >= NOW() - $${valueIndex}::interval`;
+    queryValues.push(`${days} days`);
+    valueIndex++;
+  }
+
+  if (minConfidence !== undefined) {
+    queryText += ` AND trash_detections.confidence >= $${valueIndex}`;
+    queryValues.push(minConfidence);
+    valueIndex++;
+  }
+
+  if (status) {
+    queryText += ` AND trash_detections.review_status = $${valueIndex}`;
+    queryValues.push(status);
+    valueIndex++;
+  }
+
+  if (hasImage) {
+    queryText += ` AND trash_detections.image_path IS NOT NULL`;
+  }
+
+  if (reviewer && reviewer !== "all") {
+    if (reviewer === "system") {
+      queryText += ` AND trash_detections.reviewed_by IS NULL`;
+    } else {
+      queryText += ` AND users.username = $${valueIndex}`;
+      queryValues.push(reviewer);
+      valueIndex++;
+    }
+  }
+
+  const result = await database.query({
+    text: queryText,
+    values: queryValues,
+  });
+
+  return result.rows[0].count;
 }
 
 const trashEvent = {

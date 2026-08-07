@@ -29,6 +29,7 @@ const availableFeatures = [
   // DASHBOARD / ADMIN
   "read:dashboard",
   "read:trash_events",
+  "review:trash_detection",
 
   // INVITATION
   "create:invitation",

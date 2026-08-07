@@ -54,7 +54,7 @@ export default function DynamicProfilePage({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: historyData, isLoading: isLoadingHistory } = useSWR(
-    `/api/v1/trash-events?reviewer=${currentUsername}&limit=15&status=validated`,
+    `/api/v1/trash-events?reviewer=${currentUsername}&limit=15&status=approved`,
     fetcher,
   );
 

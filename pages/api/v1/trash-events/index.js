@@ -21,8 +21,18 @@ router.post(postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  const { limit, material, days, min_confidence, status, reviewer, page } =
-    request.query;
+  const {
+    limit,
+    material,
+    days,
+    min_confidence,
+    status,
+    reviewer,
+    page,
+    hasImage,
+  } = request.query;
+
+  const parsedHasImage = hasImage === "true";
 
   const parsedPage = page ? parseInt(page, 10) : 1;
   const validPage = isNaN(parsedPage) || parsedPage < 1 ? 1 : parsedPage;
@@ -34,9 +44,9 @@ async function getHandler(request, response) {
   const parsedConfidence = min_confidence
     ? parseFloat(min_confidence)
     : undefined;
-  const parsedMaterial = material !== "all" ? material : undefined;
-  const parsedStatus = status !== "all" ? status : undefined;
-  const parsedReviewer = reviewer !== "all" ? reviewer : undefined;
+  const parsedMaterial = material && material !== "all" ? material : undefined;
+  const parsedStatus = status && status !== "all" ? status : undefined;
+  const parsedReviewer = reviewer && reviewer !== "all" ? reviewer : undefined;
 
   const events = await trashEvent.listEvents({
     page: validPage,
@@ -46,9 +56,21 @@ async function getHandler(request, response) {
     minConfidence: parsedConfidence,
     status: parsedStatus,
     reviewer: parsedReviewer,
+    has_image: parsedHasImage,
   });
 
-  const totalCount = parseInt(await trashEvent.countAll(), 10) || 0;
+  const totalCount =
+    parseInt(
+      await trashEvent.countAll({
+        status: parsedStatus,
+        material: parsedMaterial,
+        days: parsedDays,
+        minConfidence: parsedConfidence,
+        reviewer: parsedReviewer,
+        has_image: parsedHasImage,
+      }),
+      10,
+    ) || 0;
 
   return response.status(200).json({
     total: totalCount,

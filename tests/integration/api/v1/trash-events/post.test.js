@@ -16,6 +16,7 @@ describe("POST to /api/v1/trash-events", () => {
           class_name: "plastic",
           confidence: 0.932,
         },
+        image_path: "pending/test-mock-image.jpg",
       };
 
       const response = await fetch(

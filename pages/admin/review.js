@@ -50,7 +50,7 @@ export default function ReviewPage() {
     "brown glass",
     "paper",
     "cardboard",
-    "organic",
+    "biological",
   ];
 
   useEffect(() => {
@@ -71,12 +71,14 @@ export default function ReviewPage() {
 
   async function fetchPendingEvents() {
     try {
-      const res = await fetch("/api/v1/trash-events");
+      const res = await fetch(
+        "/api/v1/trash-events?status=pending&has_image=true&limit=50",
+      );
       const data = await res.json();
 
-      const pendingEvents = data.events
-        .filter((e) => e.status === "pending" && e.image_path)
-        .sort((a, b) => new Date(a.detected_at) - new Date(b.detected_at));
+      const pendingEvents = (data.events || []).filter(
+        (e) => e.review_status === "pending" && e.image_path,
+      );
 
       setEvents(pendingEvents);
     } catch (error) {

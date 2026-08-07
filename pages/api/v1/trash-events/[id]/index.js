@@ -55,7 +55,10 @@ async function patchHandler(request, response) {
   });
   const userFeatures = userResult.rows[0]?.features || [];
 
-  if (!userFeatures.includes("review:trash_detection")) {
+  if (
+    !userFeatures.includes("review:trash_detection") &&
+    !userFeatures.includes("admin")
+  ) {
     throw new ForbiddenError({
       message: "Você não tem permissão para revisar detecções.",
       action: "Solicite a permissão de revisor ao administrador.",

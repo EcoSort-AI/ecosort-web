@@ -82,8 +82,8 @@ export default function HistoryPage({
     });
   };
 
-  const renderStatusBadge = (status) => {
-    if (status === "pending") {
+  const renderStatusBadge = (reviewStatus) => {
+    if (reviewStatus === "pending") {
       return (
         <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 font-medium px-2.5 py-1 rounded-md text-xs flex items-center gap-1.5 w-fit">
           <Clock size={12} />
@@ -91,6 +91,7 @@ export default function HistoryPage({
         </span>
       );
     }
+
     return (
       <span className="bg-green-500/10 text-green-500 border border-green-500/20 font-medium px-2.5 py-1 rounded-md text-xs flex items-center gap-1.5 w-fit">
         <CheckCircle2 size={12} />
@@ -154,7 +155,10 @@ export default function HistoryPage({
                   className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
                 >
                   <option value="all">Todos os Status</option>
-                  <option value="validated">Apenas Validados</option>
+                  <option value="approved">Apenas Validados</option>
+                  <option value="system_approved">
+                    Aprovados pelo Sistema
+                  </option>
                   <option value="pending">Aguardando Revisão</option>
                 </select>
               </div>
@@ -283,12 +287,14 @@ export default function HistoryPage({
                       <tr
                         key={event.id}
                         onClick={() => {
-                          if (event.status === "pending") {
+                          if (event.review_status === "pending") {
                             router.push("/admin/review");
                           }
                         }}
                         className={`border-b border-[#374151] hover:bg-[#2a2a2a] transition-colors ${
-                          event.status === "pending" ? "cursor-pointer" : ""
+                          event.review_status === "pending"
+                            ? "cursor-pointer"
+                            : ""
                         }`}
                       >
                         <td className="px-6 py-4 text-gray-300">
@@ -310,12 +316,12 @@ export default function HistoryPage({
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          {renderStatusBadge(event.status)}
+                          {renderStatusBadge(event.review_status)}
                         </td>
                         <td className="px-6 py-4 text-gray-300 text-xs font-medium">
                           {event.reviewed_by_username ? (
                             event.reviewed_by_username
-                          ) : event.status === "pending" ? (
+                          ) : event.review_status === "pending" ? (
                             <span className="text-gray-500 italic">
                               Pendente
                             </span>

@@ -317,18 +317,21 @@ export default function Home({ isLoggedIn }) {
               display: "flex",
               flexWrap: "wrap",
               alignItems: "center",
-              justifyContent: "space-around",
+              justifyContent: "center",
               gap: "40px",
             }}
           >
             <div
               style={{
-                flex: "0 1 350px",
-                height: "350px",
+                flex: "1 1 350px",
+                maxWidth: "350px",
+                width: "100%",
+                aspectRatio: "1 / 1",
                 position: "relative",
                 display: "flex",
                 alignItems: "flex-end",
                 justifyContent: "center",
+                margin: "0 auto",
               }}
             >
               {!metricsData ? (
@@ -345,8 +348,8 @@ export default function Home({ isLoggedIn }) {
                 <div
                   style={{
                     position: "relative",
-                    width: "350px",
-                    height: "350px",
+                    width: "100%", // Troca o 350px por 100%
+                    height: "100%", // Troca o 350px por 100%
                   }}
                 >
                   {chartData.map((item, index) => {

@@ -126,7 +126,7 @@ describe("GET /api/v1/trash-events", () => {
 
       await database.query({
         text: `INSERT INTO trash_detections (bin_id, item_class, ai_prediction, confidence, detected_at, review_status, storage_status, dataset_status, reviewed_by)
-               VALUES ('bin_test', 'glass', 'glass', 0.9, NOW(), 'pending', 'pending', 'pending', NULL)`,
+               VALUES ('bin_test', 'white-glass', 'white-glass', 0.9, NOW(), 'pending', 'pending', 'pending', NULL)`,
       });
 
       const response = await fetch(

@@ -113,6 +113,7 @@ describe("Use case: Password Recovery Flow", () => {
     expect(successLoginResponse.status).toBe(201);
 
     const responseBody = await successLoginResponse.json();
-    expect(responseBody.token).toBeDefined();
+    const setCookieHeader = successLoginResponse.headers.get("set-cookie");
+    expect(setCookieHeader).toContain("session_id=");
   });
 });

@@ -1,4 +1,4 @@
-import { InternalServerError } from "infra/errors.js";
+import { InternalServerError, ForbiddenError } from "infra/errors.js";
 
 const availableFeatures = [
   // MASTER FEATURE
@@ -29,6 +29,7 @@ const availableFeatures = [
   // DASHBOARD / ADMIN
   "read:dashboard",
   "read:trash_events",
+  "review:trash_detection",
 
   // INVITATION
   "create:invitation",
@@ -85,19 +86,28 @@ function filterOutput(user, feature, resource) {
         updated_at: resource.updated_at,
       };
     }
+    throw new ForbiddenError({
+      message:
+        "Você não possui permissão para acessar o conteúdo deste recurso.",
+      action: "Verifique se você é o proprietário dos dados solicitados.",
+    });
   }
 
   if (feature === "read:session") {
     if (user.id === resource.user_id) {
       return {
         id: resource.id,
-        token: resource.token,
         user_id: resource.user_id,
         created_at: resource.created_at,
         updated_at: resource.updated_at,
         expires_at: resource.expires_at,
       };
     }
+    throw new ForbiddenError({
+      message:
+        "Você não possui permissão para acessar o conteúdo deste recurso.",
+      action: "Verifique se você é o proprietário dos dados solicitados.",
+    });
   }
 
   if (feature === "read:activation_token") {
@@ -142,9 +152,10 @@ function filterOutput(user, feature, resource) {
 }
 
 function validateUser(user) {
-  if (!user || !user.features) {
+  if (!user || !Array.isArray(user.features)) {
     throw new InternalServerError({
-      cause: "É necessário fornecer `user` no model `authorization`.",
+      cause:
+        "É necessário fornecer `user` contendo um array de `features` válido no model `authorization`.",
     });
   }
 }

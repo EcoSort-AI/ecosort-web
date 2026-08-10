@@ -50,9 +50,6 @@ describe("Use case: Login Flow (Success and Failures)", () => {
 
     expect(response.status).toBe(201);
 
-    const responseBody = await response.json();
-    expect(responseBody.token).toBeDefined();
-
     const setCookieHeader = response.headers.get("set-cookie");
     expect(setCookieHeader).toContain("session_id=");
   });

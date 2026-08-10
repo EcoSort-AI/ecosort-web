@@ -44,17 +44,21 @@ const items = [
 export function AppSidebar() {
   const router = useRouter();
 
-  const { data } = useSWR("/api/v1/trash-events?status=pending", fetcher, {
-    refreshInterval: 5000,
-  });
+  const { data } = useSWR(
+    "/api/v1/trash-events?status=pending&has_image=true",
+    fetcher,
+    {
+      refreshInterval: 5000,
+    },
+  );
 
-  const pendingCount = data?.events?.length || 0;
+  const pendingCount = data?.total || 0;
 
   const previousCountRef = useRef(undefined);
 
   useEffect(() => {
-    if (data && data.events) {
-      const currentCount = data.events.length;
+    if (data) {
+      const currentCount = data.total || 0;
 
       if (
         previousCountRef.current !== undefined &&

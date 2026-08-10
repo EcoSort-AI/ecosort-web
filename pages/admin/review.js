@@ -50,7 +50,7 @@ export default function ReviewPage() {
     "brown glass",
     "paper",
     "cardboard",
-    "organic",
+    "biological",
   ];
 
   useEffect(() => {
@@ -71,12 +71,14 @@ export default function ReviewPage() {
 
   async function fetchPendingEvents() {
     try {
-      const res = await fetch("/api/v1/trash-events");
+      const res = await fetch(
+        "/api/v1/trash-events?status=pending&has_image=true&limit=50",
+      );
       const data = await res.json();
 
-      const pendingEvents = data.events
-        .filter((e) => e.status === "pending" && e.image_path)
-        .sort((a, b) => new Date(a.detected_at) - new Date(b.detected_at));
+      const pendingEvents = (data.events || []).filter(
+        (e) => e.review_status === "pending" && e.image_path,
+      );
 
       setEvents(pendingEvents);
     } catch (error) {
@@ -107,7 +109,6 @@ export default function ReviewPage() {
 
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== event.id));
-
         setSelectedClasses((prev) => {
           const newState = { ...prev };
           delete newState[event.id];
@@ -116,6 +117,17 @@ export default function ReviewPage() {
 
         toast.success(
           `Classificação atualizada para ${translateMaterial(classToSend)}!`,
+        );
+      } else if (res.status === 409) {
+        setEvents((prev) => prev.filter((e) => e.id !== event.id));
+        setSelectedClasses((prev) => {
+          const newState = { ...prev };
+          delete newState[event.id];
+          return newState;
+        });
+
+        toast.info(
+          "Outro usuário acabou de revisar esta imagem! Ela foi removida da sua fila.",
         );
       } else {
         const errorData = await res.json();

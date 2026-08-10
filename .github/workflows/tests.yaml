@@ -15,4 +15,7 @@ jobs:
 
       - run: npm ci
 
-      - run: npm test
+      - name: Run Jest Tests
+        run: npm test
+        env:
+          MOCK_STORAGE: true

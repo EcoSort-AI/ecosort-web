@@ -109,7 +109,6 @@ export default function ReviewPage() {
 
       if (res.ok) {
         setEvents((prev) => prev.filter((e) => e.id !== event.id));
-
         setSelectedClasses((prev) => {
           const newState = { ...prev };
           delete newState[event.id];
@@ -118,6 +117,17 @@ export default function ReviewPage() {
 
         toast.success(
           `Classificação atualizada para ${translateMaterial(classToSend)}!`,
+        );
+      } else if (res.status === 409) {
+        setEvents((prev) => prev.filter((e) => e.id !== event.id));
+        setSelectedClasses((prev) => {
+          const newState = { ...prev };
+          delete newState[event.id];
+          return newState;
+        });
+
+        toast.info(
+          "Outro usuário acabou de revisar esta imagem! Ela foi removida da sua fila.",
         );
       } else {
         const errorData = await res.json();

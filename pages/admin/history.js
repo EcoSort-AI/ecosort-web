@@ -5,7 +5,7 @@ import authorization from "models/authorization.js";
 import trashEvent from "models/trashEvent.js";
 import { useRouter } from "next/router";
 import useSWR from "swr";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { translateMaterial } from "@/lib/dictionary";
 
 import { AppSidebar } from "@/components/ui/app-sidebar";
@@ -41,6 +41,11 @@ export default function HistoryPage({
 }) {
   const router = useRouter();
 
+  const [page, setPage] = useState(1);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
+
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterMaterial, setFilterMaterial] = useState("all");
   const [filterDays, setFilterDays] = useState("all");
@@ -48,6 +53,7 @@ export default function HistoryPage({
   const [filterReviewer, setFilterReviewer] = useState("all");
 
   const queryParams = new URLSearchParams({
+    page: page.toString(),
     status: filterStatus,
     material: filterMaterial,
     days: filterDays,
@@ -98,6 +104,11 @@ export default function HistoryPage({
         Processado
       </span>
     );
+  };
+
+  const handleFilterChange = (setter, value) => {
+    setter(value);
+    setPage(1);
   };
 
   return (
@@ -151,14 +162,13 @@ export default function HistoryPage({
                 </label>
                 <select
                   value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange(setFilterStatus, e.target.value)
+                  }
                   className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
                 >
                   <option value="all">Todos os Status</option>
                   <option value="approved">Apenas Validados</option>
-                  <option value="system_approved">
-                    Aprovados pelo Sistema
-                  </option>
                   <option value="pending">Aguardando Revisão</option>
                 </select>
               </div>
@@ -169,11 +179,12 @@ export default function HistoryPage({
                 </label>
                 <select
                   value={filterMaterial}
-                  onChange={(e) => setFilterMaterial(e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange(setFilterMaterial, e.target.value)
+                  }
                   className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
                 >
                   <option value="all">Todas as Classes</option>
-
                   {availableClasses.map((material) => (
                     <option key={material} value={material}>
                       {translateMaterial(material)}
@@ -188,7 +199,9 @@ export default function HistoryPage({
                 </label>
                 <select
                   value={filterDays}
-                  onChange={(e) => setFilterDays(e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange(setFilterDays, e.target.value)
+                  }
                   className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
                 >
                   <option value="all">Todo o período</option>
@@ -206,7 +219,9 @@ export default function HistoryPage({
                 </label>
                 <select
                   value={filterConfidence}
-                  onChange={(e) => setFilterConfidence(e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange(setFilterConfidence, e.target.value)
+                  }
                   className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
                 >
                   <option value="0">Qualquer precisão</option>
@@ -222,7 +237,9 @@ export default function HistoryPage({
                 </label>
                 <select
                   value={filterReviewer}
-                  onChange={(e) => setFilterReviewer(e.target.value)}
+                  onChange={(e) =>
+                    handleFilterChange(setFilterReviewer, e.target.value)
+                  }
                   className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-sm focus:border-[#16a34a] focus:outline-none"
                 >
                   <option value="all">Qualquer usuário</option>
@@ -237,7 +254,7 @@ export default function HistoryPage({
             </div>
           </Card>
 
-          <Card className="bg-[#1f1f1f] border-[#374151] overflow-hidden">
+          <Card className="bg-[#1f1f1f] border-[#374151] overflow-hidden flex flex-col">
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left">
                 <thead className="text-xs text-gray-400 uppercase bg-[#242424] border-b border-[#374151]">
@@ -336,6 +353,42 @@ export default function HistoryPage({
                 </tbody>
               </table>
             </div>
+
+            {data?.pagination && (
+              <div className="flex items-center justify-between p-4 bg-[#242424] border-t border-[#374151]">
+                <span className="text-sm text-gray-400">
+                  Mostrando página{" "}
+                  <strong className="text-white">{data.pagination.page}</strong>{" "}
+                  de{" "}
+                  <strong className="text-white">
+                    {data.pagination.total_pages || 1}
+                  </strong>{" "}
+                  (Total: {data.pagination.total_records} registros)
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={data.pagination.page === 1}
+                    className="px-3 py-1.5 bg-[#1f1f1f] border border-[#374151] rounded-md text-sm font-medium text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-colors"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() =>
+                      setPage((p) =>
+                        Math.min(data.pagination.total_pages, p + 1),
+                      )
+                    }
+                    disabled={
+                      data.pagination.page >= data.pagination.total_pages
+                    }
+                    className="px-3 py-1.5 bg-[#1f1f1f] border border-[#374151] rounded-md text-sm font-medium text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-colors"
+                  >
+                    Próximo
+                  </button>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
       </SidebarInset>

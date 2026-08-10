@@ -12,14 +12,7 @@ exports.up = (pgm) => {
     UPDATE trash_detections SET confidence = 0 WHERE confidence < 0;
   `);
 
-  pgm.dropConstraint("trash_detections", "check_confidence_range", {
-    ifExists: true,
-  });
-  pgm.addConstraint("trash_detections", "check_confidence_range", {
-    check: "confidence >= 0 AND confidence <= 1",
-  });
-
-  const validClasses = [
+  const validClassesList = [
     "'plastic'",
     "'metal'",
     "'white-glass'",
@@ -32,18 +25,35 @@ exports.up = (pgm) => {
     "'invalid_image'",
   ].join(", ");
 
+  pgm.sql(`
+    UPDATE trash_detections 
+    SET item_class = 'trash' 
+    WHERE item_class NOT IN (${validClassesList});
+
+    UPDATE trash_detections 
+    SET ai_prediction = 'trash' 
+    WHERE ai_prediction NOT IN (${validClassesList});
+  `);
+
+  pgm.dropConstraint("trash_detections", "check_confidence_range", {
+    ifExists: true,
+  });
+  pgm.addConstraint("trash_detections", "check_confidence_range", {
+    check: "confidence >= 0 AND confidence <= 1",
+  });
+
   pgm.dropConstraint("trash_detections", "check_valid_item_class", {
     ifExists: true,
   });
   pgm.addConstraint("trash_detections", "check_valid_item_class", {
-    check: `item_class IN (${validClasses})`,
+    check: `item_class IN (${validClassesList})`,
   });
 
   pgm.dropConstraint("trash_detections", "check_valid_ai_prediction", {
     ifExists: true,
   });
   pgm.addConstraint("trash_detections", "check_valid_ai_prediction", {
-    check: `ai_prediction IN (${validClasses})`,
+    check: `ai_prediction IN (${validClassesList})`,
   });
 
   pgm.createIndex("trash_detections", "detected_at", { ifNotExists: true });

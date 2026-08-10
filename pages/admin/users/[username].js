@@ -54,7 +54,7 @@ export default function DynamicProfilePage({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: historyData, isLoading: isLoadingHistory } = useSWR(
-    `/api/v1/trash-events?reviewer=${currentUsername}&limit=15&status=approved`,
+    `/api/v1/trash-events?reviewer=${currentUsername}&limit=10&status=approved`,
     fetcher,
   );
 
@@ -317,7 +317,7 @@ export async function getServerSideProps(context) {
     return {
       props: {
         targetUsername: targetUser.username,
-        targetEmail: isOwner ? targetUser.email : "Oculto por privacidade",
+        targetEmail: targetUser.email,
         isOwner: isOwner,
       },
     };

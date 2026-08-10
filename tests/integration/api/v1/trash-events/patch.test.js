@@ -1,6 +1,7 @@
 import orchestrator from "tests/orchestrator.js";
 import trashEvent from "models/trashEvent.js";
 import database from "infra/database.js";
+import s3Client from "infra/storage.js";
 
 beforeAll(async () => {
   await orchestrator.waitForAllServices();
@@ -10,6 +11,12 @@ beforeAll(async () => {
 
 describe("PATCH /api/v1/trash-events/[id]", () => {
   test("Validating an event saves the user ID and updates status correctly without hitting R2", async () => {
+    const s3SendMock = jest.spyOn(s3Client, "send").mockImplementation(() => {
+      return Promise.resolve({
+        $metadata: { httpStatusCode: 200 },
+      });
+    });
+
     const user = await orchestrator.createUser({ username: "auditor_teste" });
     await orchestrator.addFeaturesToUser(user, ["review:trash_detection"]);
     const session = await orchestrator.createSession(user.id);
@@ -52,6 +59,8 @@ describe("PATCH /api/v1/trash-events/[id]", () => {
     expect(updatedEvent.reviewed_at instanceof Date).toBe(true);
     expect(updatedEvent.stored_at).not.toBeNull();
     expect(updatedEvent.stored_at instanceof Date).toBe(true);
+
+    s3SendMock.mockRestore();
   });
 
   test("Should return 409 Conflict when attempting to review an item that has already been reviewed (Concurrency)", async () => {

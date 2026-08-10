@@ -317,7 +317,7 @@ export async function getServerSideProps(context) {
     return {
       props: {
         targetUsername: targetUser.username,
-        targetEmail: isOwner ? targetUser.email : "Oculto por privacidade",
+        targetEmail: targetUser.email,
         isOwner: isOwner,
       },
     };

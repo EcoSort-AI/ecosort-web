@@ -2,9 +2,9 @@ import { S3Client } from "@aws-sdk/client-s3";
 
 let s3Client;
 
-if (process.env.MOCK_STORAGE === "true") {
+if (process.env.NODE_ENV === "test" || process.env.MOCK_STORAGE === "true") {
   s3Client = {
-    send: async () => Promise.resolve({}),
+    send: async () => Promise.resolve({ $metadata: { httpStatusCode: 200 } }),
   };
 } else {
   s3Client = new S3Client({

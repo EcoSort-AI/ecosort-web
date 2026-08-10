@@ -2,14 +2,6 @@ import orchestrator from "tests/orchestrator.js";
 import trashEvent from "models/trashEvent.js";
 import database from "infra/database.js";
 
-jest.mock("infra/storage.js", () => {
-  return {
-    send: jest.fn().mockResolvedValue({
-      $metadata: { httpStatusCode: 200 },
-    }),
-  };
-});
-
 beforeAll(async () => {
   await orchestrator.waitForAllServices();
   await orchestrator.clearDatabase();

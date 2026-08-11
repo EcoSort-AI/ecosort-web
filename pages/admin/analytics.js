@@ -28,9 +28,25 @@ import {
   Tooltip,
   ResponsiveContainer,
   Cell,
+  Legend,
+  Radar,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  AreaChart,
+  Area,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogOut, Target, CheckCircle2, TrendingUp } from "lucide-react";
+import {
+  LogOut,
+  Target,
+  CheckCircle2,
+  TrendingUp,
+  GitCompare,
+  Scale,
+  Layers,
+} from "lucide-react";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
 
@@ -39,6 +55,9 @@ export default function AnalyticsPage() {
   const router = useRouter();
 
   const [selectedVersion, setSelectedVersion] = useState("all");
+
+  const [modelA, setModelA] = useState("");
+  const [modelB, setModelB] = useState("");
 
   useEffect(() => {
     setIsMounted(true);
@@ -99,6 +118,83 @@ export default function AnalyticsPage() {
     };
   }, [apiData]);
 
+  useEffect(() => {
+    if (analyticsData.availableVersions.length > 0) {
+      const sortedVersions = [...analyticsData.availableVersions].sort((a, b) =>
+        a.localeCompare(b),
+      );
+
+      if (!modelA) {
+        setModelA(sortedVersions[0]);
+      }
+
+      if (!modelB) {
+        setModelB(
+          sortedVersions.length > 1
+            ? sortedVersions[sortedVersions.length - 1]
+            : sortedVersions[0],
+        );
+      }
+    }
+  }, [analyticsData.availableVersions, modelA, modelB]);
+
+  const { data: dataA } = useSWR(
+    modelA ? `/api/v1/analytics?version=${modelA}` : null,
+    fetcher,
+    { refreshInterval: 10000 },
+  );
+
+  const { data: dataB } = useSWR(
+    modelB ? `/api/v1/analytics?version=${modelB}` : null,
+    fetcher,
+    { refreshInterval: 10000 },
+  );
+
+  const comparisonData = useMemo(() => {
+    if (!dataA?.accuracyByClass || !dataB?.accuracyByClass) return [];
+
+    const categoriesA = dataA.accuracyByClass.map((c) => c.category);
+    const categoriesB = dataB.accuracyByClass.map((c) => c.category);
+    const allUniqueCategories = Array.from(
+      new Set([...categoriesA, ...categoriesB]),
+    );
+
+    return allUniqueCategories.map((cat) => {
+      const matchA = dataA.accuracyByClass.find((c) => c.category === cat);
+      const matchB = dataB.accuracyByClass.find((c) => c.category === cat);
+
+      return {
+        subject: translateMaterial(cat),
+        category: translateMaterial(cat),
+        [modelA]: matchA ? matchA.accuracy : 0,
+        [modelB]: matchB ? matchB.accuracy : 0,
+      };
+    });
+  }, [dataA, dataB, modelA, modelB]);
+
+  const evolutionData = useMemo(() => {
+    if (
+      !analyticsData.availableVersions ||
+      analyticsData.availableVersions.length === 0
+    )
+      return [];
+
+    const sortedVersions = [...analyticsData.availableVersions].sort((a, b) =>
+      a.localeCompare(b),
+    );
+
+    return sortedVersions
+      .map((version) => {
+        if (version === modelA && dataA)
+          return { version, accuracy: dataA.globalAccuracy };
+        if (version === modelB && dataB)
+          return { version, accuracy: dataB.globalAccuracy };
+
+        return { version, accuracy: 0 };
+      })
+      .filter((item) => item.accuracy > 0);
+  }, [analyticsData.availableVersions, modelA, modelB, dataA, dataB]);
+
   if (!isMounted) return null;
 
   return (
@@ -142,7 +238,6 @@ export default function AnalyticsPage() {
             </h2>
           </div>
 
-          {/* KPIs Principais */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -205,7 +300,7 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-12">
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader>
                 <CardTitle>Acurácia por Classe</CardTitle>
@@ -337,6 +432,318 @@ export default function AnalyticsPage() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="mt-12 pt-8 border-t border-[#374151]">
+            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+              <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <GitCompare className="text-[#3b82f6]" />
+                Comparação de Modelos
+              </h2>
+
+              {/* Version Selector */}
+              <div className="flex items-center gap-4 bg-[#1f1f1f] p-3 rounded-lg border border-[#374151]">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-[#16a34a]">
+                    Modelo A:
+                  </span>
+                  <select
+                    className="bg-[#242424] border border-[#374151] rounded px-3 py-1.5 text-sm font-semibold outline-none focus:border-[#16a34a]"
+                    value={modelA}
+                    onChange={(e) => setModelA(e.target.value)}
+                  >
+                    {analyticsData.availableVersions.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <span className="text-gray-500 font-black">X</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-[#3b82f6]">
+                    Modelo B:
+                  </span>
+                  <select
+                    className="bg-[#242424] border border-[#374151] rounded px-3 py-1.5 text-sm font-semibold outline-none focus:border-[#3b82f6]"
+                    value={modelB}
+                    onChange={(e) => setModelB(e.target.value)}
+                  >
+                    {analyticsData.availableVersions.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Comparison KPIs */}
+            <div className="grid gap-4 md:grid-cols-2 mb-6">
+              <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                    <Target size={16} /> Comparativo de Acurácia Global
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-end mt-2">
+                    <div>
+                      <p className="text-xs text-[#16a34a] font-bold mb-1">
+                        {modelA || "---"}
+                      </p>
+                      <p className="text-3xl font-bold">
+                        {dataA?.globalAccuracy || 0}%
+                      </p>
+                    </div>
+                    <div className="h-8 border-l border-[#374151] mx-4"></div>
+                    <div className="text-right">
+                      <p className="text-xs text-[#3b82f6] font-bold mb-1">
+                        {modelB || "---"}
+                      </p>
+                      <p className="text-3xl font-bold">
+                        {dataB?.globalAccuracy || 0}%
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-400 flex items-center gap-2">
+                    <Layers size={16} /> Volume de Itens Revisados
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between items-end mt-2">
+                    <div>
+                      <p className="text-xs text-[#16a34a] font-bold mb-1">
+                        {modelA || "---"}
+                      </p>
+                      <p className="text-3xl font-bold">
+                        {dataA?.totalReviewed || 0}
+                      </p>
+                    </div>
+                    <div className="h-8 border-l border-[#374151] mx-4"></div>
+                    <div className="text-right">
+                      <p className="text-xs text-[#3b82f6] font-bold mb-1">
+                        {modelB || "---"}
+                      </p>
+                      <p className="text-3xl font-bold">
+                        {dataB?.totalReviewed || 0}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+                <CardHeader>
+                  <CardTitle className="text-lg">Acurácia por Classe</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={comparisonData}
+                      margin={{ top: 20, right: 10, left: -20, bottom: 5 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#374151"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="category"
+                        stroke="#9ca3af"
+                        tickLine={false}
+                        axisLine={false}
+                        className="capitalize"
+                        tick={{ fontSize: 12 }}
+                      />
+                      <YAxis
+                        stroke="#9ca3af"
+                        tickLine={false}
+                        axisLine={false}
+                        domain={[0, 100]}
+                        tickFormatter={(val) => `${val}%`}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "#2a2a2a" }}
+                        contentStyle={{
+                          backgroundColor: "#1f1f1f",
+                          borderColor: "#374151",
+                          color: "#fff",
+                          borderRadius: "6px",
+                        }}
+                        formatter={(value) => [`${value}%`, "Acurácia"]}
+                      />
+                      <Legend wrapperStyle={{ paddingTop: "20px" }} />
+                      <Bar
+                        dataKey={modelA}
+                        name={`Modelo A (${modelA})`}
+                        fill="#16a34a"
+                        radius={[4, 4, 0, 0]}
+                      />
+                      <Bar
+                        dataKey={modelB}
+                        name={`Modelo B (${modelB})`}
+                        fill="#3b82f6"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center justify-between">
+                    Equilíbrio do Modelo
+                    <Scale className="h-5 w-5 text-gray-500" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <RadarChart
+                      cx="50%"
+                      cy="50%"
+                      outerRadius="70%"
+                      data={comparisonData}
+                    >
+                      <PolarGrid stroke="#374151" />
+                      <PolarAngleAxis
+                        dataKey="subject"
+                        tick={{ fill: "#9ca3af", fontSize: 12 }}
+                        className="capitalize"
+                      />
+                      <PolarRadiusAxis
+                        angle={30}
+                        domain={[0, 100]}
+                        stroke="#374151"
+                        tickFormatter={(val) => `${val}%`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f1f1f",
+                          borderColor: "#374151",
+                          color: "#fff",
+                          borderRadius: "6px",
+                        }}
+                        formatter={(value) => [`${value}%`, "Acurácia"]}
+                      />
+                      <Legend wrapperStyle={{ paddingTop: "20px" }} />
+
+                      <Radar
+                        name={`Modelo B (${modelB})`}
+                        dataKey={modelB}
+                        stroke="#3b82f6"
+                        fill="#3b82f6"
+                        fillOpacity={0.25}
+                      />
+
+                      <Radar
+                        name={`Modelo A (${modelA})`}
+                        dataKey={modelA}
+                        stroke="#16a34a"
+                        fill="#16a34a"
+                        fillOpacity={0.45}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Evolution Chart */}
+            <div className="mt-6">
+              <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-[#16a34a]" />
+                    Evolução da Acurácia Global
+                  </CardTitle>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Acompanhe o impacto do retreinamento na performance geral da
+                    IA.
+                  </p>
+                </CardHeader>
+                <CardContent className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={evolutionData}
+                      margin={{ top: 20, right: 30, left: -20, bottom: 5 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="colorAccuracy"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#16a34a"
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#16a34a"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#374151"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="version"
+                        stroke="#9ca3af"
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 12, fontWeight: "bold" }}
+                      />
+                      <YAxis
+                        stroke="#9ca3af"
+                        tickLine={false}
+                        axisLine={false}
+                        domain={["dataMin - 10", 100]}
+                        tickFormatter={(val) => `${val.toFixed(0)}%`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f1f1f",
+                          borderColor: "#374151",
+                          color: "#fff",
+                          borderRadius: "6px",
+                        }}
+                        formatter={(value) => [`${value}%`, "Acurácia"]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="accuracy"
+                        stroke="#16a34a"
+                        strokeWidth={4}
+                        fillOpacity={1}
+                        fill="url(#colorAccuracy)"
+                        activeDot={{
+                          r: 6,
+                          fill: "#16a34a",
+                          stroke: "#fff",
+                          strokeWidth: 2,
+                        }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </SidebarInset>

@@ -33,6 +33,11 @@ const availableFeatures = [
 
   // INVITATION
   "create:invitation",
+
+  // DEVICES
+  "create:device_config",
+  "read:device_config",
+  "update:device_config",
 ];
 
 function can(user, feature, resource) {

@@ -34,6 +34,8 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
+  AreaChart,
+  Area,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -170,6 +172,29 @@ export default function AnalyticsPage() {
     });
   }, [dataA, dataB, modelA, modelB]);
 
+  const evolutionData = useMemo(() => {
+    if (
+      !analyticsData.availableVersions ||
+      analyticsData.availableVersions.length === 0
+    )
+      return [];
+
+    const sortedVersions = [...analyticsData.availableVersions].sort((a, b) =>
+      a.localeCompare(b),
+    );
+
+    return sortedVersions
+      .map((version) => {
+        if (version === modelA && dataA)
+          return { version, accuracy: dataA.globalAccuracy };
+        if (version === modelB && dataB)
+          return { version, accuracy: dataB.globalAccuracy };
+
+        return { version, accuracy: 0 };
+      })
+      .filter((item) => item.accuracy > 0);
+  }, [analyticsData.availableVersions, modelA, modelB, dataA, dataB]);
+
   if (!isMounted) return null;
 
   return (
@@ -213,7 +238,6 @@ export default function AnalyticsPage() {
             </h2>
           </div>
 
-          {/* KPIs Principais */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -435,7 +459,7 @@ export default function AnalyticsPage() {
                     ))}
                   </select>
                 </div>
-                <span className="text-gray-500 font-black">VS</span>
+                <span className="text-gray-500 font-black">X</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-[#3b82f6]">
                     Modelo B:
@@ -629,6 +653,93 @@ export default function AnalyticsPage() {
                         fillOpacity={0.45}
                       />
                     </RadarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Evolution Chart */}
+            <div className="mt-6">
+              <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-[#16a34a]" />
+                    Evolução da Acurácia Global
+                  </CardTitle>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Acompanhe o impacto do retreinamento na performance geral da
+                    IA.
+                  </p>
+                </CardHeader>
+                <CardContent className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart
+                      data={evolutionData}
+                      margin={{ top: 20, right: 30, left: -20, bottom: 5 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="colorAccuracy"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="5%"
+                            stopColor="#16a34a"
+                            stopOpacity={0.3}
+                          />
+                          <stop
+                            offset="95%"
+                            stopColor="#16a34a"
+                            stopOpacity={0}
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="#374151"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="version"
+                        stroke="#9ca3af"
+                        tickLine={false}
+                        axisLine={false}
+                        tick={{ fontSize: 12, fontWeight: "bold" }}
+                      />
+                      <YAxis
+                        stroke="#9ca3af"
+                        tickLine={false}
+                        axisLine={false}
+                        domain={["dataMin - 10", 100]}
+                        tickFormatter={(val) => `${val.toFixed(0)}%`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "#1f1f1f",
+                          borderColor: "#374151",
+                          color: "#fff",
+                          borderRadius: "6px",
+                        }}
+                        formatter={(value) => [`${value}%`, "Acurácia"]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="accuracy"
+                        stroke="#16a34a"
+                        strokeWidth={4}
+                        fillOpacity={1}
+                        fill="url(#colorAccuracy)"
+                        activeDot={{
+                          r: 6,
+                          fill: "#16a34a",
+                          stroke: "#fff",
+                          strokeWidth: 2,
+                        }}
+                      />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>

@@ -45,9 +45,9 @@ export default function ReviewPage() {
   const validClasses = [
     "plastic",
     "metal",
-    "white glass",
-    "green glass",
-    "brown glass",
+    "white-glass",
+    "green-glass",
+    "brown-glass",
     "paper",
     "cardboard",
     "biological",

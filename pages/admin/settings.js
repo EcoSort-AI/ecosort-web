@@ -34,37 +34,52 @@ import { Input } from "@/components/ui/input";
 export default function SettingsPage() {
   const router = useRouter();
 
-  const [selectedDevice, setSelectedDevice] = useState("smart-bin-01");
+  const [selectedDevice, setSelectedDevice] = useState("smart_bin_01");
   const [threshold, setThreshold] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
 
-  // Lista simulada de dispositivos cadastrados
+  const [telemetry, setTelemetry] = useState(null);
+  const [isTelemetryLoading, setIsTelemetryLoading] = useState(true);
+
   const registeredDevices = ["smart_bin_01", "smart_bin_02", "smart_bin_03"];
 
   useEffect(() => {
-    async function fetchConfig() {
+    async function fetchData() {
       setIsLoading(true);
+      setIsTelemetryLoading(true);
+      setTelemetry(null);
+
       try {
-        const response = await fetch(
+        const configRes = await fetch(
           `/api/v1/device/config?device=${selectedDevice}`,
         );
-        if (response.ok) {
-          const data = await response.json();
-          setThreshold(data.confidence_threshold);
+        if (configRes.ok) {
+          const configData = await configRes.json();
+          setThreshold(configData.confidence_threshold);
         } else {
-          console.error("Dispositivo não encontrado ou erro na API");
           setThreshold("");
         }
+
+        const teleRes = await fetch(
+          `/api/v1/device/telemetry?device=${selectedDevice}`,
+        );
+        if (teleRes.ok) {
+          const teleData = await teleRes.json();
+          setTelemetry(teleData);
+        } else {
+          setTelemetry(null);
+        }
       } catch (error) {
-        console.error("Erro ao buscar configurações:", error);
+        console.error("Erro ao buscar dados do dispositivo:", error);
       } finally {
         setIsLoading(false);
+        setIsTelemetryLoading(false);
       }
     }
 
-    fetchConfig();
+    fetchData();
   }, [selectedDevice]);
 
   const handleLogout = async () => {
@@ -151,6 +166,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="mb-6 flex items-center gap-4 bg-[#1f1f1f] p-4 rounded-lg border border-[#374151]">
+            <Server className="text-gray-400" size={20} />
             <label className="text-sm font-medium text-gray-300">
               Dispositivo Ativo:
             </label>
@@ -168,7 +184,7 @@ export default function SettingsPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
-            {/* AI and HW */}
+            {/* AI and HW Settings */}
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader className="border-b border-[#374151] pb-4 mb-4">
                 <CardTitle className="text-lg font-medium text-gray-200">
@@ -248,7 +264,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* Device health */}
-            <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+            <Card className="bg-[#1f1f1f] border-[#374151] text-white flex flex-col">
               <CardHeader className="border-b border-[#374151] pb-4 mb-4">
                 <CardTitle className="text-lg font-medium text-gray-200 flex items-center gap-2">
                   <Activity size={20} className="text-[#16a34a]" />
@@ -259,71 +275,91 @@ export default function SettingsPage() {
                 </p>
               </CardHeader>
 
-              <CardContent className="space-y-6">
-                {/* Métricas Mockadas */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
-                    <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
-                      <Cpu size={14} /> Uso de CPU
-                    </span>
-                    <span className="text-lg font-semibold text-gray-200">
-                      {selectedDevice === "smart-bin-01" ? "42%" : "18%"}
-                    </span>
+              <CardContent className="space-y-6 flex-1 flex flex-col">
+                {isTelemetryLoading ? (
+                  <div className="flex items-center justify-center text-gray-400 text-sm flex-1 min-h-[200px]">
+                    <Loader2 className="mr-2 h-6 w-6 animate-spin" /> Carregando
+                    telemetria...
                   </div>
-                  <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
-                    <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
-                      <Thermometer size={14} /> Temp. Placa
-                    </span>
-                    <span className="text-lg font-semibold text-gray-200">
-                      {selectedDevice === "smart-bin-01" ? "58°C" : "45°C"}
-                    </span>
+                ) : !telemetry ? (
+                  <div className="flex items-center justify-center text-gray-500 text-sm flex-1 min-h-[200px] border border-dashed border-[#374151] rounded-md">
+                    Nenhum dado de telemetria recebido para este dispositivo.
                   </div>
-                  <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
-                    <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
-                      <Activity size={14} /> Memória (RAM)
-                    </span>
-                    <span className="text-lg font-semibold text-gray-200">
-                      {selectedDevice === "smart-bin-01"
-                        ? "1.2 / 4 GB"
-                        : "0.8 / 4 GB"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
-                    <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
-                      <HardDrive size={14} /> Armazenamento
-                    </span>
-                    <span className="text-lg font-semibold text-gray-200">
-                      14.5 GB Livres
-                    </span>
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[#374151]">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <span className="block text-sm font-medium text-gray-300">
-                        Status do Contêiner
-                      </span>
-                      <span className="text-xs text-emerald-400 flex items-center gap-1 mt-1">
-                        <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                ) : (
+                  <>
+                    {/* Métricas Reais do Banco de Dados */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
+                        <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                          <Cpu size={14} /> Uso de CPU
                         </span>
-                        Rodando (Up 3 days)
-                      </span>
+                        <span className="text-lg font-semibold text-gray-200">
+                          {telemetry.cpu_usage}%
+                        </span>
+                      </div>
+                      <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
+                        <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                          <Thermometer size={14} /> Temp. Placa
+                        </span>
+                        <span className="text-lg font-semibold text-gray-200">
+                          {telemetry.temperature}°C
+                        </span>
+                      </div>
+                      <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
+                        <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                          <Activity size={14} /> Memória (RAM)
+                        </span>
+                        <span className="text-lg font-semibold text-gray-200">
+                          {telemetry.ram_usage}
+                        </span>
+                      </div>
+                      <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
+                        <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
+                          <HardDrive size={14} /> Armazenamento
+                        </span>
+                        <span className="text-lg font-semibold text-gray-200">
+                          {telemetry.disk_free}
+                        </span>
+                      </div>
                     </div>
-                  </div>
 
-                  <button
-                    onClick={() =>
-                      console.log(`Comando enfileirado para ${selectedDevice}!`)
-                    }
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
-                  >
-                    <RefreshCw size={16} />
-                    Reiniciar Serviço (Docker)
-                  </button>
-                </div>
+                    <div className="pt-4 border-t border-[#374151] mt-auto">
+                      <div className="flex items-center justify-between mb-4">
+                        <div>
+                          <span className="block text-sm font-medium text-gray-300">
+                            Status do Contêiner
+                          </span>
+                          <span className="text-xs text-emerald-400 flex items-center gap-1 mt-1">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                            {telemetry.uptime}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 text-right">
+                          Última leitura:
+                          <br />
+                          {new Date(telemetry.created_at).toLocaleTimeString(
+                            "pt-BR",
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          console.log(
+                            `Comando enfileirado para ${selectedDevice}!`,
+                          )
+                        }
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
+                      >
+                        <RefreshCw size={16} />
+                        Reiniciar Serviço (Docker)
+                      </button>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </div>

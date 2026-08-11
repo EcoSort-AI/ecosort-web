@@ -145,20 +145,21 @@ export default function Home({ isLoggedIn }) {
           padding: "20px 40px",
         }}
       >
-        <h1
-          style={{
-            color: "#16a34a",
-            fontSize: "1.5em",
-            margin: 0,
-            fontWeight: "bold",
-          }}
-        >
-          EcoSort AI
-        </h1>
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <Image
+            src="/logo.png"
+            alt="EcoSort AI Logo"
+            width={160}
+            height={50}
+            priority
+            style={{ objectFit: "contain" }}
+          />
+        </div>
 
         <Link
           href={isLoggedIn ? "/admin" : "/login"}
-          className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
+          style={{ transform: "translateY(-4px)" }}
+          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
         >
           Acessar Painel
         </Link>
@@ -348,8 +349,8 @@ export default function Home({ isLoggedIn }) {
                 <div
                   style={{
                     position: "relative",
-                    width: "100%", // Troca o 350px por 100%
-                    height: "100%", // Troca o 350px por 100%
+                    width: "100%",
+                    height: "100%",
                   }}
                 >
                   {chartData.map((item, index) => {

@@ -22,7 +22,7 @@ import {
   LineChart,
   Users,
   Settings,
-  Trash2,
+  Home,
   UserCircle,
 } from "lucide-react";
 
@@ -91,10 +91,10 @@ export function AppSidebar() {
         >
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-[#16a34a]/20">
-              <Trash2 className="h-5 w-5 text-[#16a34a]" />
+              <Home className="h-5 w-5 text-[#16a34a]" />
             </div>
             <span className="text-lg font-bold tracking-tight text-white">
-              EcoSort AI
+              Página Inicial
             </span>
           </div>
         </Link>

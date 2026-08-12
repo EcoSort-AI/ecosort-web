@@ -8,6 +8,8 @@ import authorization from "models/authorization.js";
 import { toast } from "sonner";
 import { translateMaterial } from "@/lib/dictionary";
 
+import UserFeaturesModal from "@/components/ui/UserFeaturesModal";
+
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import {
   SidebarInset,
@@ -34,6 +36,7 @@ import {
   Save,
   History,
   CheckCircle2,
+  ShieldAlert,
 } from "lucide-react";
 
 const fetcher = (url) =>
@@ -46,12 +49,15 @@ export default function DynamicProfilePage({
   targetUsername,
   targetEmail,
   isOwner,
+  canEditFeatures,
 }) {
   const router = useRouter();
 
   const [currentUsername] = useState(targetUsername);
   const [formUsername, setFormUsername] = useState(targetUsername);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const { data: historyData, isLoading: isLoadingHistory } = useSWR(
     `/api/v1/trash-events?reviewer=${currentUsername}&limit=10&status=approved`,
@@ -127,7 +133,7 @@ export default function DynamicProfilePage({
           </div>
           <button
             onClick={handleLogout}
-            className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
+            className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors cursor-pointer"
           >
             <LogOut size={16} /> Sair
           </button>
@@ -201,7 +207,7 @@ export default function DynamicProfilePage({
                         disabled={
                           isSubmitting || formUsername === currentUsername
                         }
-                        className="w-full py-2 px-6 bg-[#16a34a] hover:bg-[#15803d] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors flex items-center justify-center gap-2"
+                        className="w-full py-2 px-6 bg-[#16a34a] hover:bg-[#15803d] disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
                       >
                         {isSubmitting ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -210,6 +216,19 @@ export default function DynamicProfilePage({
                         )}
                         Salvar Alterações
                       </button>
+                    )}
+
+                    {canEditFeatures && (
+                      <div className="pt-4 mt-4 border-t border-[#374151]">
+                        <button
+                          type="button"
+                          onClick={() => setIsModalOpen(true)}
+                          className="w-full py-2 px-4 bg-[#242424] border border-[#374151] hover:border-[#16a34a] hover:text-[#16a34a] text-gray-300 font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <ShieldAlert className="h-4 w-4" />
+                          Editar Permissões
+                        </button>
+                      </div>
                     )}
                   </form>
                 </CardContent>
@@ -285,6 +304,12 @@ export default function DynamicProfilePage({
             </div>
           </div>
         </div>
+
+        <UserFeaturesModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          targetUsername={targetUsername}
+        />
       </SidebarInset>
     </SidebarProvider>
   );
@@ -314,11 +339,16 @@ export async function getServerSideProps(context) {
 
     const isOwner = loggedInUser.username === targetUser.username;
 
+    const canEditFeatures =
+      authorization.can(loggedInUser, "admin") ||
+      authorization.can(loggedInUser, "update:user:others");
+
     return {
       props: {
         targetUsername: targetUser.username,
         targetEmail: targetUser.email,
         isOwner: isOwner,
+        canEditFeatures: canEditFeatures,
       },
     };
   } catch (error) {

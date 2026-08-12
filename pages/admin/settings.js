@@ -4,6 +4,7 @@ import user from "models/user.js";
 import authorization from "models/authorization.js";
 import { useRouter } from "next/router";
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import {
   LogOut,
   Save,
@@ -38,10 +39,13 @@ export default function SettingsPage() {
   const [threshold, setThreshold] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [statusMessage, setStatusMessage] = useState(null);
 
   const [telemetry, setTelemetry] = useState(null);
   const [isTelemetryLoading, setIsTelemetryLoading] = useState(true);
+
+  const [isCommandSending, setIsCommandSending] = useState(false);
+
+  const [modelVersion, setModelVersion] = useState("Carregando...");
 
   const registeredDevices = ["smart_bin_01", "smart_bin_02", "smart_bin_03"];
 
@@ -50,6 +54,7 @@ export default function SettingsPage() {
       setIsLoading(true);
       setIsTelemetryLoading(true);
       setTelemetry(null);
+      setModelVersion("Carregando...");
 
       try {
         const configRes = await fetch(
@@ -71,8 +76,27 @@ export default function SettingsPage() {
         } else {
           setTelemetry(null);
         }
+
+        const eventRes = await fetch(
+          `/api/v1/trash-events?bin_id=${selectedDevice}&limit=1&sort=desc`,
+        );
+        if (eventRes.ok) {
+          const eventData = await eventRes.json();
+          const latestEvent = eventData.events?.[0];
+
+          if (latestEvent && latestEvent.model_version) {
+            setModelVersion(latestEvent.model_version);
+          } else if (latestEvent) {
+            setModelVersion("Versão não informada no payload");
+          } else {
+            setModelVersion("Aguardando primeira classificação...");
+          }
+        } else {
+          setModelVersion("Erro ao buscar versão");
+        }
       } catch (error) {
         console.error("Erro ao buscar dados do dispositivo:", error);
+        setModelVersion("Indisponível (Erro de conexão)");
       } finally {
         setIsLoading(false);
         setIsTelemetryLoading(false);
@@ -96,7 +120,6 @@ export default function SettingsPage() {
 
   const handleSaveConfig = async () => {
     setIsSaving(true);
-    setStatusMessage(null);
 
     try {
       const response = await fetch("/api/v1/device/config", {
@@ -111,19 +134,47 @@ export default function SettingsPage() {
       });
 
       if (response.ok) {
-        setStatusMessage({ type: "success", text: "Configuração atualizada!" });
+        toast.success("Configuração atualizada com sucesso!");
       } else {
-        setStatusMessage({ type: "error", text: "Erro ao atualizar." });
+        toast.error("Erro ao atualizar a configuração.");
       }
     } catch (error) {
-      setStatusMessage({ type: "error", text: "Erro de conexão." });
+      toast.error("Erro de conexão ao tentar salvar.");
     } finally {
       setIsSaving(false);
-      setTimeout(() => setStatusMessage(null), 3000);
     }
   };
 
-  const modelVersion = "v0.9.0-beta - Modelo de Classificação de Objetos";
+  const handleRestartService = async () => {
+    setIsCommandSending(true);
+
+    try {
+      const response = await fetch("/api/v1/device/commands", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          device_name: selectedDevice,
+          command: "restart_docker",
+        }),
+      });
+
+      if (response.ok) {
+        toast.success(
+          `Comando enfileirado para ${selectedDevice}! A placa executará a ação em breve.`,
+        );
+      } else {
+        const errorData = await response.json();
+        toast.error(`Erro: ${errorData.message || "Desconhecido"}`);
+      }
+    } catch (error) {
+      console.error("Erro de conexão ao enviar comando:", error);
+      toast.error("Erro de conexão com o servidor.");
+    } finally {
+      setIsCommandSending(false);
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -148,7 +199,7 @@ export default function SettingsPage() {
 
           <button
             onClick={handleLogout}
-            className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
+            className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors cursor-pointer"
           >
             <LogOut size={16} />
             Sair
@@ -227,22 +278,29 @@ export default function SettingsPage() {
                     Versão do Modelo em Produção
                   </label>
                   <p className="text-sm text-gray-500 mb-2">
-                    A versão do modelo de visão computacional atualmente
-                    embarcado no contêiner.
+                    Extraído dinamicamente da última classificação da lixeira.
                   </p>
-                  <Input
-                    type="text"
-                    value={modelVersion}
-                    disabled
-                    className="max-w-md bg-[#242424] border-[#374151] text-gray-400 cursor-not-allowed"
-                  />
+
+                  {isLoading ? (
+                    <div className="flex items-center text-gray-400 text-sm h-10">
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />{" "}
+                      Verificando versão...
+                    </div>
+                  ) : (
+                    <Input
+                      type="text"
+                      value={modelVersion}
+                      disabled
+                      className="max-w-md bg-[#242424] border-[#374151] text-gray-300 cursor-not-allowed font-mono text-sm"
+                    />
+                  )}
                 </div>
 
                 <div className="pt-4 flex items-center gap-4 border-t border-[#374151] mt-6">
                   <button
                     onClick={handleSaveConfig}
                     disabled={isLoading || isSaving}
-                    className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#16a34a] rounded-md hover:bg-[#15803d] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#16a34a] rounded-md hover:bg-[#15803d] disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                   >
                     {isSaving ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -251,14 +309,6 @@ export default function SettingsPage() {
                     )}
                     Salvar Alterações
                   </button>
-
-                  {statusMessage && (
-                    <span
-                      className={`text-sm ${statusMessage.type === "success" ? "text-[#16a34a]" : "text-red-400"}`}
-                    >
-                      {statusMessage.text}
-                    </span>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -346,17 +396,22 @@ export default function SettingsPage() {
                         </div>
                       </div>
 
-                      <button
-                        onClick={() =>
-                          console.log(
-                            `Comando enfileirado para ${selectedDevice}!`,
-                          )
-                        }
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
-                      >
-                        <RefreshCw size={16} />
-                        Reiniciar Serviço (Docker)
-                      </button>
+                      <div className="flex flex-col">
+                        <button
+                          onClick={handleRestartService}
+                          disabled={isCommandSending}
+                          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                        >
+                          {isCommandSending ? (
+                            <Loader2 size={16} className="animate-spin" />
+                          ) : (
+                            <RefreshCw size={16} />
+                          )}
+                          {isCommandSending
+                            ? "Enfileirando..."
+                            : "Reiniciar Serviço (Docker)"}
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}

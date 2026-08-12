@@ -38,6 +38,9 @@ const availableFeatures = [
   "create:device_config",
   "read:device_config",
   "update:device_config",
+
+  // COMMANDS
+  "create:device_command",
 ];
 
 function can(user, feature, resource) {

@@ -30,6 +30,7 @@ async function getHandler(request, response) {
     reviewer,
     page,
     hasImage,
+    sort_order,
   } = request.query;
 
   const parsedHasImage = hasImage === "true";
@@ -57,6 +58,7 @@ async function getHandler(request, response) {
     status: parsedStatus,
     reviewer: parsedReviewer,
     has_image: parsedHasImage,
+    sortOrder: sort_order,
   });
 
   const totalCount =

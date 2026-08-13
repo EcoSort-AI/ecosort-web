@@ -36,8 +36,9 @@ export default function ReviewPage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [validatingId, setValidatingId] = useState(null);
-
   const [selectedClasses, setSelectedClasses] = useState({});
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const router = useRouter();
 
@@ -55,7 +56,8 @@ export default function ReviewPage() {
 
   useEffect(() => {
     fetchPendingEvents();
-  }, []);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page]);
 
   const handleLogout = async () => {
     try {
@@ -70,9 +72,10 @@ export default function ReviewPage() {
   };
 
   async function fetchPendingEvents() {
+    setLoading(true);
     try {
       const res = await fetch(
-        "/api/v1/trash-events?status=pending&has_image=true&limit=50",
+        "/api/v1/trash-events?status=pending&has_image=true&limit=12&sort_order=ASC&page=${page}",
       );
       const data = await res.json();
 
@@ -81,6 +84,7 @@ export default function ReviewPage() {
       );
 
       setEvents(pendingEvents);
+      setTotalPages(data.pagination?.total_pages || 1);
     } catch (error) {
       console.error("Erro ao buscar eventos:", error);
     } finally {
@@ -191,122 +195,146 @@ export default function ReviewPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {events.map((event) => {
-                const currentSelection =
-                  selectedClasses[event.id] || event.item_class;
-                const isCurrentlyValidating = validatingId === event.id;
+            <>
+              <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                {events.map((event) => {
+                  const currentSelection =
+                    selectedClasses[event.id] || event.item_class;
+                  const isCurrentlyValidating = validatingId === event.id;
 
-                return (
-                  <div
-                    key={event.id}
-                    className="bg-[#1f1f1f] border border-[#374151] rounded-xl p-4 flex flex-col shadow-sm"
-                  >
-                    <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden bg-[#242424] border border-[#374151]">
-                      <img
-                        src={`${R2_PUBLIC_URL}/${event.image_path}`}
-                        alt={`Detectado como ${event.item_class}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    <div className="space-y-1 text-sm mb-5">
-                      <p className="text-gray-300">
-                        <span className="text-gray-500 font-medium">
-                          Previsão da IA:
-                        </span>{" "}
-                        <span className="capitalize font-medium text-white">
-                          {translateMaterial(event.item_class)}
-                        </span>
-                      </p>
-                      <p className="text-gray-300">
-                        <span className="text-gray-500 font-medium">
-                          Confiança:
-                        </span>{" "}
-                        <span
-                          className={
-                            event.confidence > 0.85
-                              ? "text-green-400 font-semibold"
-                              : "text-yellow-400 font-semibold"
-                          }
-                        >
-                          {(event.confidence * 100).toFixed(1)}%
-                        </span>
-                      </p>
-                      <p className="text-gray-400 text-xs">
-                        <span className="text-gray-500 font-medium">
-                          Lixeira:
-                        </span>{" "}
-                        {event.bin_id}
-                      </p>
-                    </div>
-
-                    <div className="mt-auto flex flex-col gap-3">
-                      <div>
-                        <p className="text-xs text-gray-500 mb-2 uppercase font-semibold tracking-wider">
-                          Corrigir Classe
-                        </p>
-                        <Combobox items={validClasses}>
-                          <ComboboxInput
-                            placeholder="Selecione a classe..."
-                            readOnly={true}
-                            value={translateMaterial(currentSelection)}
-                            disabled={isCurrentlyValidating}
-                            style={{
-                              cursor: isCurrentlyValidating
-                                ? "not-allowed"
-                                : "pointer",
-                              fontFamily: "sans-serif",
-                            }}
-                            className="capitalize bg-[#1f1f1f] text-white border-[#374151] placeholder:text-gray-500 focus:ring-[#16a34a] !cursor-pointer !select-none caret-transparent disabled:opacity-50"
-                          />
-                          <ComboboxContent
-                            style={{ fontFamily: "sans-serif" }}
-                            className="bg-[#1f1f1f] border border-[#374151] text-white shadow-lg rounded-md"
-                          >
-                            <ComboboxEmpty className="py-3 text-center text-sm text-gray-400">
-                              Nenhuma classe encontrada.
-                            </ComboboxEmpty>
-                            <ComboboxList>
-                              {(cls) => (
-                                <ComboboxItem
-                                  key={cls}
-                                  value={cls}
-                                  onSelect={() =>
-                                    handleSelectTempClass(event.id, cls)
-                                  }
-                                  onClick={() =>
-                                    handleSelectTempClass(event.id, cls)
-                                  }
-                                  className="capitalize cursor-pointer text-gray-300 hover:bg-[#374151] hover:text-white data-[selected=true]:bg-[#374151] data-[selected=true]:text-white rounded-sm px-2 py-1.5"
-                                >
-                                  <span>{translateMaterial(cls)}</span>
-                                </ComboboxItem>
-                              )}
-                            </ComboboxList>
-                          </ComboboxContent>
-                        </Combobox>
+                  return (
+                    <div
+                      key={event.id}
+                      className="bg-[#1f1f1f] border border-[#374151] rounded-xl p-4 flex flex-col shadow-sm"
+                    >
+                      <div className="relative w-full h-48 mb-4 rounded-md overflow-hidden bg-[#242424] border border-[#374151]">
+                        <img
+                          src={`${R2_PUBLIC_URL}/${event.image_path}`}
+                          alt={`Detectado como ${event.item_class}`}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
 
-                      <button
-                        onClick={() => handleConfirm(event)}
-                        disabled={isCurrentlyValidating}
-                        className="w-full py-2 px-4 bg-[#16a34a] hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                      >
-                        {isCurrentlyValidating ? (
-                          <>
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Validando...
-                          </>
-                        ) : (
-                          <>Confirmar</>
-                        )}
-                      </button>
+                      <div className="space-y-1 text-sm mb-5">
+                        <p className="text-gray-300">
+                          <span className="text-gray-500 font-medium">
+                            Previsão da IA:
+                          </span>{" "}
+                          <span className="capitalize font-medium text-white">
+                            {translateMaterial(event.item_class)}
+                          </span>
+                        </p>
+                        <p className="text-gray-300">
+                          <span className="text-gray-500 font-medium">
+                            Confiança:
+                          </span>{" "}
+                          <span
+                            className={
+                              event.confidence > 0.85
+                                ? "text-green-400 font-semibold"
+                                : "text-yellow-400 font-semibold"
+                            }
+                          >
+                            {(event.confidence * 100).toFixed(1)}%
+                          </span>
+                        </p>
+                        <p className="text-gray-400 text-xs">
+                          <span className="text-gray-500 font-medium">
+                            Lixeira:
+                          </span>{" "}
+                          {event.bin_id}
+                        </p>
+                      </div>
+
+                      <div className="mt-auto flex flex-col gap-3">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-2 uppercase font-semibold tracking-wider">
+                            Corrigir Classe
+                          </p>
+                          <Combobox items={validClasses}>
+                            <ComboboxInput
+                              placeholder="Selecione a classe..."
+                              readOnly={true}
+                              value={translateMaterial(currentSelection)}
+                              disabled={isCurrentlyValidating}
+                              style={{
+                                cursor: isCurrentlyValidating
+                                  ? "not-allowed"
+                                  : "pointer",
+                                fontFamily: "sans-serif",
+                              }}
+                              className="capitalize bg-[#1f1f1f] text-white border-[#374151] placeholder:text-gray-500 focus:ring-[#16a34a] !cursor-pointer !select-none caret-transparent disabled:opacity-50"
+                            />
+                            <ComboboxContent
+                              style={{ fontFamily: "sans-serif" }}
+                              className="bg-[#1f1f1f] border border-[#374151] text-white shadow-lg rounded-md"
+                            >
+                              <ComboboxEmpty className="py-3 text-center text-sm text-gray-400">
+                                Nenhuma classe encontrada.
+                              </ComboboxEmpty>
+                              <ComboboxList>
+                                {(cls) => (
+                                  <ComboboxItem
+                                    key={cls}
+                                    value={cls}
+                                    onSelect={() =>
+                                      handleSelectTempClass(event.id, cls)
+                                    }
+                                    onClick={() =>
+                                      handleSelectTempClass(event.id, cls)
+                                    }
+                                    className="capitalize cursor-pointer text-gray-300 hover:bg-[#374151] hover:text-white data-[selected=true]:bg-[#374151] data-[selected=true]:text-white rounded-sm px-2 py-1.5"
+                                  >
+                                    <span>{translateMaterial(cls)}</span>
+                                  </ComboboxItem>
+                                )}
+                              </ComboboxList>
+                            </ComboboxContent>
+                          </Combobox>
+                        </div>
+
+                        <button
+                          onClick={() => handleConfirm(event)}
+                          disabled={isCurrentlyValidating}
+                          className="w-full py-2 px-4 bg-[#16a34a] hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-md transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          {isCurrentlyValidating ? (
+                            <>
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                              Validando...
+                            </>
+                          ) : (
+                            <>Confirmar</>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-8 flex justify-between items-center bg-[#1f1f1f] p-4 rounded-xl border border-[#374151]">
+                <span className="text-sm text-gray-400 font-medium">
+                  Página {page} de {totalPages}
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="px-4 py-2 bg-[#242424] border border-[#374151] rounded-md text-sm font-medium text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-colors"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="px-4 py-2 bg-[#242424] border border-[#374151] rounded-md text-sm font-medium text-gray-300 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#374151] transition-colors"
+                  >
+                    Próximo
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
       </SidebarInset>

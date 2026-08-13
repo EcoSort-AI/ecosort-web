@@ -104,6 +104,7 @@ async function listEvents({
   status,
   reviewer,
   hasImage,
+  sortOrder = "DESC",
 } = {}) {
   const queryValues = [];
   let valueIndex = 1;
@@ -155,7 +156,8 @@ async function listEvents({
     }
   }
 
-  queryText += ` ORDER BY trash_detections.detected_at DESC`;
+  const validSortOrder = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
+  queryText += ` ORDER BY trash_detections.detected_at ${validSortOrder}`;
 
   const offset = (page - 1) * limit;
 

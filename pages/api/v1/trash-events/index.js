@@ -57,7 +57,7 @@ async function getHandler(request, response) {
     minConfidence: parsedConfidence,
     status: parsedStatus,
     reviewer: parsedReviewer,
-    has_image: parsedHasImage,
+    hasImage: parsedHasImage,
     sortOrder: sort_order,
   });
 
@@ -69,7 +69,7 @@ async function getHandler(request, response) {
         days: parsedDays,
         minConfidence: parsedConfidence,
         reviewer: parsedReviewer,
-        has_image: parsedHasImage,
+        hasImage: parsedHasImage,
       }),
       10,
     ) || 0;

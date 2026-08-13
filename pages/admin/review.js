@@ -71,11 +71,11 @@ export default function ReviewPage() {
     }
   };
 
-  async function fetchPendingEvents() {
+  async function fetchPendingEvents(currentPage) {
     setLoading(true);
     try {
       const res = await fetch(
-        "/api/v1/trash-events?status=pending&has_image=true&limit=12&sort_order=ASC&page=${page}",
+        `/api/v1/trash-events?status=pending&has_image=true&limit=12&sort_order=ASC&page=${currentPage}`,
       );
       const data = await res.json();
 

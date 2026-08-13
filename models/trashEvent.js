@@ -157,7 +157,7 @@ async function listEvents({
   }
 
   const validSortOrder = sortOrder.toUpperCase() === "ASC" ? "ASC" : "DESC";
-  queryText += ` ORDER BY trash_detections.detected_at ${validSortOrder}`;
+  queryText += ` ORDER BY trash_detections.detected_at ${validSortOrder}, trash_detections.id ${validSortOrder}`;
 
   const offset = (page - 1) * limit;
 

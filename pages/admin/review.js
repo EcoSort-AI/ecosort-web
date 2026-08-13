@@ -2,6 +2,7 @@
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import useSWR from "swr";
 import session from "models/session.js";
 import user from "models/user.js";
 import authorization from "models/authorization.js";
@@ -21,7 +22,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
 } from "@/components/ui/breadcrumb";
-import { LogOut, Loader2, Check } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
 
 import {
   Combobox,
@@ -32,15 +33,14 @@ import {
   ComboboxList,
 } from "@/components/ui/combobox";
 
+const fetcher = (url) => fetch(url).then((res) => res.json());
+
 export default function ReviewPage() {
-  const [events, setEvents] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+
+  const [page, setPage] = useState(1);
   const [validatingId, setValidatingId] = useState(null);
   const [selectedClasses, setSelectedClasses] = useState({});
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-
-  const router = useRouter();
 
   const R2_PUBLIC_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
   const validClasses = [
@@ -54,8 +54,27 @@ export default function ReviewPage() {
     "biological",
   ];
 
+  const queryParams = new URLSearchParams({
+    status: "pending",
+    hasImage: "true",
+    limit: "12",
+    sort_order: "ASC",
+    page: page.toString(),
+  }).toString();
+
+  const { data, error, mutate } = useSWR(
+    `/api/v1/trash-events?${queryParams}`,
+    fetcher,
+  );
+
+  const eventsList = (data?.events || []).filter(
+    (e) => e.review_status === "pending" && e.image_path,
+  );
+
+  const totalPages = data?.pagination?.total_pages || 1;
+  const isLoading = !data && !error;
+
   useEffect(() => {
-    fetchPendingEvents();
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [page]);
 
@@ -71,27 +90,6 @@ export default function ReviewPage() {
     }
   };
 
-  async function fetchPendingEvents() {
-    setLoading(true);
-    try {
-      const res = await fetch(
-        "/api/v1/trash-events?status=pending&has_image=true&limit=12&sort_order=ASC&page=${page}",
-      );
-      const data = await res.json();
-
-      const pendingEvents = (data.events || []).filter(
-        (e) => e.review_status === "pending" && e.image_path,
-      );
-
-      setEvents(pendingEvents);
-      setTotalPages(data.pagination?.total_pages || 1);
-    } catch (error) {
-      console.error("Erro ao buscar eventos:", error);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   const handleSelectTempClass = (eventId, cls) => {
     setSelectedClasses((prev) => ({
       ...prev,
@@ -101,7 +99,6 @@ export default function ReviewPage() {
 
   async function handleConfirm(event) {
     const classToSend = selectedClasses[event.id] || event.item_class;
-
     setValidatingId(event.id);
 
     try {
@@ -112,7 +109,8 @@ export default function ReviewPage() {
       });
 
       if (res.ok) {
-        setEvents((prev) => prev.filter((e) => e.id !== event.id));
+        mutate();
+
         setSelectedClasses((prev) => {
           const newState = { ...prev };
           delete newState[event.id];
@@ -123,13 +121,7 @@ export default function ReviewPage() {
           `Classificação atualizada para ${translateMaterial(classToSend)}!`,
         );
       } else if (res.status === 409) {
-        setEvents((prev) => prev.filter((e) => e.id !== event.id));
-        setSelectedClasses((prev) => {
-          const newState = { ...prev };
-          delete newState[event.id];
-          return newState;
-        });
-
+        mutate();
         toast.info(
           "Outro usuário acabou de revisar esta imagem! Ela foi removida da sua fila.",
         );
@@ -186,9 +178,9 @@ export default function ReviewPage() {
             </h2>
           </div>
 
-          {loading ? (
+          {isLoading ? (
             <p className="text-gray-400">Carregando fila de revisão...</p>
-          ) : events.length === 0 ? (
+          ) : eventsList.length === 0 ? (
             <div className="p-8 bg-[#1f1f1f] border border-[#374151] rounded-xl text-center">
               <p className="text-gray-400 text-lg">
                 Nenhum evento pendente. A fila está vazia.
@@ -197,7 +189,7 @@ export default function ReviewPage() {
           ) : (
             <>
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                {events.map((event) => {
+                {eventsList.map((event) => {
                   const currentSelection =
                     selectedClasses[event.id] || event.item_class;
                   const isCurrentlyValidating = validatingId === event.id;

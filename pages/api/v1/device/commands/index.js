@@ -2,6 +2,7 @@ import { createRouter } from "next-connect";
 import controller from "infra/controller.js";
 import authorization from "models/authorization.js";
 import deviceCommand from "models/deviceCommand.js";
+import deviceSetting from "models/deviceSetting.js";
 import { ForbiddenError } from "infra/errors.js";
 
 const router = createRouter();
@@ -63,6 +64,8 @@ async function postHandler(request, response) {
       .status(400)
       .json({ error: "Os campos 'device_name' e 'command' são obrigatórios." });
   }
+
+  await deviceSetting.createIfNotExists(device_name);
 
   const newCommand = await deviceCommand.enqueueCommand(device_name, command);
 

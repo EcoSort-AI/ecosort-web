@@ -75,7 +75,6 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!selectedDevice) return;
 
-    // Função 1: Carregamento inicial completo (com tela de loading)
     async function fetchInitialData() {
       setIsLoading(true);
       setIsTelemetryLoading(true);
@@ -127,7 +126,6 @@ export default function SettingsPage() {
       }
     }
 
-    // Função 2: Atualização silenciosa apenas da telemetria (sem piscar a tela)
     async function fetchTelemetryBackground() {
       try {
         const teleRes = await fetch(
@@ -146,7 +144,7 @@ export default function SettingsPage() {
 
     const pollingInterval = setInterval(() => {
       fetchTelemetryBackground();
-    }, 30000);
+    }, 120000);
 
     return () => clearInterval(pollingInterval);
   }, [selectedDevice]);
@@ -157,7 +155,7 @@ export default function SettingsPage() {
     const interval = setInterval(() => {
       const lastUpdate = new Date(telemetry.created_at).getTime();
       const now = new Date().getTime();
-      setIsOnline(now - lastUpdate <= 90000);
+      setIsOnline(now - lastUpdate <= 150000);
     }, 1000);
 
     return () => clearInterval(interval);

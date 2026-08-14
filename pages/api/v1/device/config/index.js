@@ -50,6 +50,8 @@ async function patchHandler(request, response) {
       .json({ error: "O nome do dispositivo é obrigatório." });
   }
 
+  await deviceSetting.createIfNotExists(device_name);
+
   const updatedConfig = await deviceSetting.updateByName(device_name, {
     confidenceThreshold: confidence_threshold,
     classesStatus: classes_status,

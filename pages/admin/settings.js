@@ -35,22 +35,42 @@ import { Input } from "@/components/ui/input";
 export default function SettingsPage() {
   const router = useRouter();
 
-  const [selectedDevice, setSelectedDevice] = useState("smart_bin_01");
+  const [selectedDevice, setSelectedDevice] = useState("");
+  const [devices, setDevices] = useState([]);
   const [threshold, setThreshold] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
   const [telemetry, setTelemetry] = useState(null);
   const [isTelemetryLoading, setIsTelemetryLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(false);
 
   const [isCommandSending, setIsCommandSending] = useState(false);
-
   const [modelVersion, setModelVersion] = useState("Carregando...");
 
-  const registeredDevices = ["smart_bin_01", "smart_bin_02", "smart_bin_03"];
+  useEffect(() => {
+    async function fetchDevices() {
+      try {
+        const res = await fetch("/api/v1/devices");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.devices && data.devices.length > 0) {
+            setDevices(data.devices);
+            setSelectedDevice(data.devices[0]);
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dispositivos:", error);
+      }
+    }
+    fetchDevices();
+  }, []);
 
   useEffect(() => {
-    async function fetchData() {
+    if (!selectedDevice) return;
+
+    // Função 1: Carregamento inicial completo (com tela de loading)
+    async function fetchInitialData() {
       setIsLoading(true);
       setIsTelemetryLoading(true);
       setTelemetry(null);
@@ -73,8 +93,6 @@ export default function SettingsPage() {
         if (teleRes.ok) {
           const teleData = await teleRes.json();
           setTelemetry(teleData);
-        } else {
-          setTelemetry(null);
         }
 
         const eventRes = await fetch(
@@ -103,8 +121,41 @@ export default function SettingsPage() {
       }
     }
 
-    fetchData();
+    // Função 2: Atualização silenciosa apenas da telemetria (sem piscar a tela)
+    async function fetchTelemetryBackground() {
+      try {
+        const teleRes = await fetch(
+          `/api/v1/device/telemetry?device=${selectedDevice}`,
+        );
+        if (teleRes.ok) {
+          const teleData = await teleRes.json();
+          setTelemetry(teleData);
+        }
+      } catch (error) {
+        console.error("Erro na atualização em segundo plano:", error);
+      }
+    }
+
+    fetchInitialData();
+
+    const pollingInterval = setInterval(() => {
+      fetchTelemetryBackground();
+    }, 30000);
+
+    return () => clearInterval(pollingInterval);
   }, [selectedDevice]);
+
+  useEffect(() => {
+    if (!telemetry?.created_at) return;
+
+    const interval = setInterval(() => {
+      const lastUpdate = new Date(telemetry.created_at).getTime();
+      const now = new Date().getTime();
+      setIsOnline(now - lastUpdate <= 90000);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [telemetry]);
 
   const handleLogout = async () => {
     try {
@@ -225,12 +276,17 @@ export default function SettingsPage() {
               value={selectedDevice}
               onChange={(e) => setSelectedDevice(e.target.value)}
               className="bg-[#242424] border border-[#374151] text-white text-sm rounded-md focus:ring-[#16a34a] focus:border-[#16a34a] block p-2 outline-none min-w-[200px]"
+              disabled={devices.length === 0}
             >
-              {registeredDevices.map((device) => (
-                <option key={device} value={device}>
-                  {device}
-                </option>
-              ))}
+              {devices.length === 0 ? (
+                <option value="">Nenhum dispositivo encontrado</option>
+              ) : (
+                devices.map((device) => (
+                  <option key={device} value={device}>
+                    {device}
+                  </option>
+                ))
+              )}
             </select>
           </div>
 
@@ -318,7 +374,7 @@ export default function SettingsPage() {
               <CardHeader className="border-b border-[#374151] pb-4 mb-4">
                 <CardTitle className="text-lg font-medium text-gray-200 flex items-center gap-2">
                   <Activity size={20} className="text-[#16a34a]" />
-                  Saúde: {selectedDevice}
+                  Saúde: {selectedDevice || "Nenhum"}
                 </CardTitle>
                 <p className="text-sm text-gray-400 mt-1">
                   Telemetria em tempo real e controle do contêiner remoto.
@@ -337,7 +393,6 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <>
-                    {/* Métricas Reais do Banco de Dados */}
                     <div className="grid grid-cols-2 gap-4">
                       <div className="flex flex-col bg-[#242424] p-3 rounded-md border border-[#374151]">
                         <span className="text-xs text-gray-400 flex items-center gap-1 mb-1">
@@ -377,15 +432,24 @@ export default function SettingsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <div>
                           <span className="block text-sm font-medium text-gray-300">
-                            Status do Contêiner
+                            Status do Dispositivo
                           </span>
-                          <span className="text-xs text-emerald-400 flex items-center gap-1 mt-1">
-                            <span className="relative flex h-2 w-2">
-                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          {isOnline ? (
+                            <span className="text-xs text-emerald-400 flex items-center gap-1 mt-1">
+                              <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                              </span>
+                              Ativo (Online)
                             </span>
-                            {telemetry.uptime}
-                          </span>
+                          ) : (
+                            <span className="text-xs text-red-400 flex items-center gap-1 mt-1">
+                              <span className="relative flex h-2 w-2">
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                              </span>
+                              Inativo (Offline)
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-500 text-right">
                           Última leitura:
@@ -399,7 +463,7 @@ export default function SettingsPage() {
                       <div className="flex flex-col">
                         <button
                           onClick={handleRestartService}
-                          disabled={isCommandSending}
+                          disabled={isCommandSending || !isOnline}
                           className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                         >
                           {isCommandSending ? (

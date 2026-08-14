@@ -57,10 +57,16 @@ export default function SettingsPage() {
           if (data.devices && data.devices.length > 0) {
             setDevices(data.devices);
             setSelectedDevice(data.devices[0]);
+          } else {
+            setIsLoading(false);
+            setIsTelemetryLoading(false);
+            setModelVersion("Nenhum dispositivo cadastrado");
           }
         }
       } catch (error) {
         console.error("Erro ao buscar dispositivos:", error);
+        setIsLoading(false);
+        setIsTelemetryLoading(false);
       }
     }
     fetchDevices();

@@ -124,7 +124,10 @@ async function patchHandler(request, response) {
     });
   }
 
-  const newPath = `dataset/${correctClass}/${id}.jpg`;
+  const newPath =
+    correctClass === "invalid_image"
+      ? `rejected/invalid-image/${id}.jpg`
+      : `dataset/${correctClass}/${id}.jpg`;
 
   try {
     await s3Client.send(
@@ -152,10 +155,20 @@ async function patchHandler(request, response) {
     text: `
       UPDATE trash_detections 
       SET 
-        review_status = 'approved',
+        review_status = CASE
+          WHEN $1 = 'invalid_image' THEN 'invalid'
+          WHEN ai_prediction = $1 THEN 'approved'
+          ELSE 'corrected'
+        END,
         storage_status = 'stored',
-        dataset_status = 'eligible',
-        item_class = $1, 
+        dataset_status = CASE
+          WHEN $1 = 'invalid_image' THEN 'excluded'
+          ELSE 'eligible'
+        END,
+        item_class = CASE
+          WHEN $1 = 'invalid_image' THEN item_class
+          ELSE $1
+        END,
         image_path = $2, 
         reviewed_by = $3,
         updated_at = NOW(),

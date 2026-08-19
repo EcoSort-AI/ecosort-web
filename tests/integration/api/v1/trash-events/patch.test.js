@@ -42,7 +42,7 @@ describe("PATCH /api/v1/trash-events/[id]", () => {
 
     const updatedEvent = dbResult.rows[0];
 
-    expect(updatedEvent.review_status).toBe("approved");
+    expect(updatedEvent.review_status).toBe("corrected");
     expect(updatedEvent.storage_status).toBe("stored");
     expect(updatedEvent.dataset_status).toBe("eligible");
     expect(updatedEvent.item_class).toBe("cardboard");

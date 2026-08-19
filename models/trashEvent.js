@@ -62,7 +62,7 @@ async function create(eventData) {
 }
 
 async function review(eventId, validatedClass, reviewerId) {
-  if (!isValidClass(validatedClass)) {
+  if (!isValidClass(validatedClass) && validatedClass !== "invalid_image") {
     const error = new Error(`Classe validada inválida: ${validatedClass}`);
     error.name = "ValidationError";
     throw error;
@@ -72,10 +72,22 @@ async function review(eventId, validatedClass, reviewerId) {
     text: `
       UPDATE trash_detections 
       SET 
-        review_status = 'approved',
-        dataset_status = 'eligible',
-        item_class = $1, 
-        reviewed_by = $2
+        review_status = CASE
+          WHEN $1 = 'invalid_image' THEN 'invalid'
+          WHEN ai_prediction = $1 THEN 'approved'
+          ELSE 'corrected'
+        END,
+        dataset_status = CASE
+          WHEN $1 = 'invalid_image' THEN 'excluded'
+          ELSE 'eligible'
+        END,
+        item_class = CASE
+          WHEN $1 = 'invalid_image' THEN item_class
+          ELSE $1
+        END,
+        reviewed_by = $2,
+        reviewed_at = NOW(),
+        updated_at = NOW()
       WHERE id = $3 AND review_status = 'pending'
       RETURNING *;
     `,

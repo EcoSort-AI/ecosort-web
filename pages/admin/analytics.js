@@ -106,9 +106,9 @@ export default function AnalyticsPage() {
     const chartData = apiData.accuracyByClass
       .map((item) => ({
         category: translateMaterial(item.category),
-        accuracy: item.accuracy,
+        accuracy: item.hasSamples ? item.accuracy : null,
       }))
-      .sort((a, b) => b.accuracy - a.accuracy);
+      .sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
 
     return {
       ...apiData,
@@ -166,8 +166,8 @@ export default function AnalyticsPage() {
       return {
         subject: translateMaterial(cat),
         category: translateMaterial(cat),
-        [modelA]: matchA ? matchA.accuracy : 0,
-        [modelB]: matchB ? matchB.accuracy : 0,
+        [modelA]: matchA && matchA.hasSamples ? matchA.accuracy : null,
+        [modelB]: matchB && matchB.hasSamples ? matchB.accuracy : null,
       };
     });
   }, [dataA, dataB, modelA, modelB]);
@@ -185,14 +185,14 @@ export default function AnalyticsPage() {
 
     return sortedVersions
       .map((version) => {
-        if (version === modelA && dataA)
+        if (version === modelA && dataA && dataA.globalAccuracy !== null)
           return { version, accuracy: dataA.globalAccuracy };
-        if (version === modelB && dataB)
+        if (version === modelB && dataB && dataB.globalAccuracy !== null)
           return { version, accuracy: dataB.globalAccuracy };
 
-        return { version, accuracy: 0 };
+        return null;
       })
-      .filter((item) => item.accuracy > 0);
+      .filter(Boolean);
   }, [analyticsData.availableVersions, modelA, modelB, dataA, dataB]);
 
   if (!isMounted) return null;
@@ -248,7 +248,9 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-[#16a34a]">
-                  {analyticsData.globalAccuracy}%
+                  {analyticsData.globalAccuracy !== null
+                    ? `${analyticsData.globalAccuracy}%`
+                    : "---"}
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Taxa de acerto geral após validação
@@ -494,7 +496,9 @@ export default function AnalyticsPage() {
                         {modelA || "---"}
                       </p>
                       <p className="text-3xl font-bold">
-                        {dataA?.globalAccuracy || 0}%
+                        {dataA?.globalAccuracy !== null
+                          ? `${dataA?.globalAccuracy}%`
+                          : "---"}
                       </p>
                     </div>
                     <div className="h-8 border-l border-[#374151] mx-4"></div>
@@ -503,7 +507,9 @@ export default function AnalyticsPage() {
                         {modelB || "---"}
                       </p>
                       <p className="text-3xl font-bold">
-                        {dataB?.globalAccuracy || 0}%
+                        {dataB?.globalAccuracy !== null
+                          ? `${dataB?.globalAccuracy}%`
+                          : "---"}
                       </p>
                     </div>
                   </div>

@@ -138,3 +138,23 @@ export class UnauthorizedError extends Error {
     };
   }
 }
+
+export class ConcurrencyError extends Error {
+  constructor({ cause, message, action }) {
+    super(message || "Ocorreu um conflito de concorrência no recurso.", {
+      cause,
+    });
+    this.name = "ConcurrencyError";
+    this.action = action || "Atualize a página ou os dados e tente novamente.";
+    this.statusCode = 409;
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      action: this.action,
+      status_code: this.statusCode,
+    };
+  }
+}

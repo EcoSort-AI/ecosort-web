@@ -106,9 +106,9 @@ export default function AnalyticsPage() {
     const chartData = apiData.accuracyByClass
       .map((item) => ({
         category: translateMaterial(item.category),
-        accuracy: item.accuracy,
+        accuracy: item.hasSamples ? item.accuracy : null,
       }))
-      .sort((a, b) => b.accuracy - a.accuracy);
+      .sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
 
     return {
       ...apiData,
@@ -166,8 +166,8 @@ export default function AnalyticsPage() {
       return {
         subject: translateMaterial(cat),
         category: translateMaterial(cat),
-        [modelA]: matchA ? matchA.accuracy : 0,
-        [modelB]: matchB ? matchB.accuracy : 0,
+        [modelA]: matchA && matchA.hasSamples ? matchA.accuracy : null,
+        [modelB]: matchB && matchB.hasSamples ? matchB.accuracy : null,
       };
     });
   }, [dataA, dataB, modelA, modelB]);
@@ -185,14 +185,14 @@ export default function AnalyticsPage() {
 
     return sortedVersions
       .map((version) => {
-        if (version === modelA && dataA)
+        if (version === modelA && dataA && dataA.globalAccuracy !== null)
           return { version, accuracy: dataA.globalAccuracy };
-        if (version === modelB && dataB)
+        if (version === modelB && dataB && dataB.globalAccuracy !== null)
           return { version, accuracy: dataB.globalAccuracy };
 
-        return { version, accuracy: 0 };
+        return null;
       })
-      .filter((item) => item.accuracy > 0);
+      .filter(Boolean);
   }, [analyticsData.availableVersions, modelA, modelB, dataA, dataB]);
 
   if (!isMounted) return null;
@@ -206,12 +206,12 @@ export default function AnalyticsPage() {
           className="flex h-16 shrink-0 items-center gap-2 border-b border-[#374151] px-4 bg-[#1f1f1f] text-white"
           style={{ fontFamily: "sans-serif" }}
         >
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1 hover:bg-[#374151] hover:text-white text-gray-400" />
+          <div className="flex items-center gap-2 overflow-hidden">
+            <SidebarTrigger className="-ml-1 hover:bg-[#374151] hover:text-white text-gray-400 shrink-0" />
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem>
-                  <BreadcrumbPage className="text-gray-300 font-medium">
+                  <BreadcrumbPage className="text-gray-300 font-medium truncate">
                     Estatísticas do Modelo
                   </BreadcrumbPage>
                 </BreadcrumbItem>
@@ -221,24 +221,24 @@ export default function AnalyticsPage() {
 
           <button
             onClick={handleLogout}
-            className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
+            className="ml-auto flex shrink-0 items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
           >
             <LogOut size={16} />
-            Sair
+            <span className="hidden sm:inline">Sair</span>
           </button>
         </header>
 
         <div
           style={{ fontFamily: "sans-serif" }}
-          className="min-h-screen bg-[#242424] p-8 text-white"
+          className="min-h-screen bg-[#242424] p-4 md:p-8 text-white overflow-x-hidden"
         >
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-3xl font-bold tracking-tight text-[#16a34a]">
+          <div className="flex items-center justify-between mb-6 md:mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-[#16a34a]">
               Desempenho da IA
             </h2>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-8">
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-400">
@@ -248,7 +248,9 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-[#16a34a]">
-                  {analyticsData.globalAccuracy}%
+                  {analyticsData.globalAccuracy !== null
+                    ? `${analyticsData.globalAccuracy}%`
+                    : "---"}
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
                   Taxa de acerto geral após validação
@@ -273,7 +275,7 @@ export default function AnalyticsPage() {
               </CardContent>
             </Card>
 
-            <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+            <Card className="bg-[#1f1f1f] border-[#374151] text-white sm:col-span-2 xl:col-span-1">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-gray-400">
                   Versão do Modelo
@@ -284,7 +286,7 @@ export default function AnalyticsPage() {
                 <select
                   value={selectedVersion}
                   onChange={(e) => setSelectedVersion(e.target.value)}
-                  className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-lg text-blue-400 font-bold focus:border-[#16a34a] focus:outline-none mb-1"
+                  className="w-full bg-[#242424] border border-[#374151] rounded-md px-3 py-2 text-base md:text-lg text-blue-400 font-bold focus:border-[#16a34a] focus:outline-none mb-1"
                 >
                   <option value="all">Todas as Versões</option>
                   {analyticsData.availableVersions.map((v) => (
@@ -300,16 +302,16 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2 mb-12">
+          <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-2 mb-12">
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader>
                 <CardTitle>Acurácia por Classe</CardTitle>
               </CardHeader>
-              <CardContent className="h-[400px]">
+              <CardContent className="h-[300px] md:h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={analyticsData.chartData}
-                    margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                    margin={{ top: 20, right: 10, left: -20, bottom: 5 }}
                   >
                     <CartesianGrid
                       strokeDasharray="3 3"
@@ -322,6 +324,7 @@ export default function AnalyticsPage() {
                       tickLine={false}
                       axisLine={false}
                       className="capitalize"
+                      tick={{ fontSize: 12 }}
                     />
                     <YAxis
                       stroke="#9ca3af"
@@ -361,21 +364,21 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Confusion Matrix */}
-            <Card className="bg-[#1f1f1f] border-[#374151] text-white">
+            <Card className="bg-[#1f1f1f] border-[#374151] text-white w-full overflow-hidden">
               <CardHeader>
-                <CardTitle>Matriz de Confusão (Heatmap)</CardTitle>
+                <CardTitle>Matriz de Confusão</CardTitle>
               </CardHeader>
               <CardContent className="overflow-x-auto pb-2 [scrollbar-color:#374151_#1f1f1f] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-track]:bg-[#1f1f1f] [&::-webkit-scrollbar-track]:rounded-lg [&::-webkit-scrollbar-thumb]:bg-[#374151] [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-[#4b5563] transition-colors">
                 <table className="w-full text-sm text-left border-collapse">
                   <thead>
                     <tr>
-                      <th className="p-3 text-gray-400 font-medium border-b border-r border-[#374151] bg-[#2a2a2a]">
+                      <th className="p-2 md:p-3 text-gray-400 font-medium border-b border-r border-[#374151] bg-[#2a2a2a] whitespace-nowrap">
                         Real \ Previsto
                       </th>
                       {analyticsData.uniqueClasses.map((cls) => (
                         <th
                           key={`th-${cls}`}
-                          className="p-3 text-center text-gray-300 font-medium capitalize border-b border-[#374151]"
+                          className="p-2 md:p-3 text-center text-gray-300 font-medium capitalize border-b border-[#374151] whitespace-nowrap"
                         >
                           {translateMaterial(cls)}
                         </th>
@@ -385,7 +388,7 @@ export default function AnalyticsPage() {
                   <tbody>
                     {analyticsData.uniqueClasses.map((realClass) => (
                       <tr key={`tr-${realClass}`}>
-                        <td className="p-3 text-gray-300 font-medium capitalize border-r border-b border-[#374151] bg-[#2a2a2a]">
+                        <td className="p-2 md:p-3 text-gray-300 font-medium capitalize border-r border-b border-[#374151] bg-[#2a2a2a] whitespace-nowrap">
                           {translateMaterial(realClass)}
                         </td>
                         {analyticsData.uniqueClasses.map((predictedClass) => {
@@ -409,7 +412,7 @@ export default function AnalyticsPage() {
                           return (
                             <td
                               key={`td-${realClass}-${predictedClass}`}
-                              className="p-3 text-center border-b border-[#374151] font-semibold"
+                              className="p-2 md:p-3 text-center border-b border-[#374151] font-semibold"
                               style={{ backgroundColor: bgColor }}
                             >
                               {count > 0 ? count : "-"}
@@ -420,13 +423,13 @@ export default function AnalyticsPage() {
                     ))}
                   </tbody>
                 </table>
-                <div className="mt-4 text-xs text-gray-400 flex gap-4">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-sm bg-[#16a34a] opacity-50"></div>
+                <div className="mt-4 text-xs text-gray-400 flex flex-col sm:flex-row gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 shrink-0 rounded-sm bg-[#16a34a] opacity-50"></div>
                     <span>Acertos (Verdadeiros Positivos)</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-3 rounded-sm bg-[#ef4444] opacity-50"></div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 shrink-0 rounded-sm bg-[#ef4444] opacity-50"></div>
                     <span>Erros (Falsos Positivos/Negativos)</span>
                   </div>
                 </div>
@@ -435,20 +438,19 @@ export default function AnalyticsPage() {
           </div>
 
           <div className="mt-12 pt-8 border-t border-[#374151]">
-            <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-              <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                <GitCompare className="text-[#3b82f6]" />
+            <div className="flex flex-col xl:flex-row xl:items-center justify-between mb-8 gap-4">
+              <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                <GitCompare className="text-[#3b82f6] shrink-0" />
                 Comparação de Modelos
               </h2>
 
-              {/* Version Selector */}
-              <div className="flex items-center gap-4 bg-[#1f1f1f] p-3 rounded-lg border border-[#374151]">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[#16a34a]">
+              <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#1f1f1f] p-3 rounded-lg border border-[#374151] w-full xl:w-auto">
+                <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+                  <span className="text-sm font-medium text-[#16a34a] whitespace-nowrap">
                     Modelo A:
                   </span>
                   <select
-                    className="bg-[#242424] border border-[#374151] rounded px-3 py-1.5 text-sm font-semibold outline-none focus:border-[#16a34a]"
+                    className="bg-[#242424] border border-[#374151] rounded px-3 py-1.5 text-sm font-semibold outline-none focus:border-[#16a34a] w-full sm:w-auto"
                     value={modelA}
                     onChange={(e) => setModelA(e.target.value)}
                   >
@@ -459,13 +461,17 @@ export default function AnalyticsPage() {
                     ))}
                   </select>
                 </div>
-                <span className="text-gray-500 font-black">X</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-[#3b82f6]">
+
+                <span className="hidden sm:block text-gray-500 font-black">
+                  X
+                </span>
+
+                <div className="flex items-center justify-between w-full sm:w-auto gap-2">
+                  <span className="text-sm font-medium text-[#3b82f6] whitespace-nowrap">
                     Modelo B:
                   </span>
                   <select
-                    className="bg-[#242424] border border-[#374151] rounded px-3 py-1.5 text-sm font-semibold outline-none focus:border-[#3b82f6]"
+                    className="bg-[#242424] border border-[#374151] rounded px-3 py-1.5 text-sm font-semibold outline-none focus:border-[#3b82f6] w-full sm:w-auto"
                     value={modelB}
                     onChange={(e) => setModelB(e.target.value)}
                   >
@@ -489,21 +495,25 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex justify-between items-end mt-2">
-                    <div>
-                      <p className="text-xs text-[#16a34a] font-bold mb-1">
+                    <div className="w-1/2">
+                      <p className="text-xs text-[#16a34a] font-bold mb-1 truncate">
                         {modelA || "---"}
                       </p>
-                      <p className="text-3xl font-bold">
-                        {dataA?.globalAccuracy || 0}%
+                      <p className="text-2xl md:text-3xl font-bold">
+                        {dataA?.globalAccuracy !== null
+                          ? `${dataA?.globalAccuracy}%`
+                          : "---"}
                       </p>
                     </div>
-                    <div className="h-8 border-l border-[#374151] mx-4"></div>
-                    <div className="text-right">
-                      <p className="text-xs text-[#3b82f6] font-bold mb-1">
+                    <div className="h-8 border-l border-[#374151] mx-2 sm:mx-4 shrink-0"></div>
+                    <div className="w-1/2 text-right">
+                      <p className="text-xs text-[#3b82f6] font-bold mb-1 truncate">
                         {modelB || "---"}
                       </p>
-                      <p className="text-3xl font-bold">
-                        {dataB?.globalAccuracy || 0}%
+                      <p className="text-2xl md:text-3xl font-bold">
+                        {dataB?.globalAccuracy !== null
+                          ? `${dataB?.globalAccuracy}%`
+                          : "---"}
                       </p>
                     </div>
                   </div>
@@ -518,20 +528,20 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex justify-between items-end mt-2">
-                    <div>
-                      <p className="text-xs text-[#16a34a] font-bold mb-1">
+                    <div className="w-1/2">
+                      <p className="text-xs text-[#16a34a] font-bold mb-1 truncate">
                         {modelA || "---"}
                       </p>
-                      <p className="text-3xl font-bold">
+                      <p className="text-2xl md:text-3xl font-bold">
                         {dataA?.totalReviewed || 0}
                       </p>
                     </div>
-                    <div className="h-8 border-l border-[#374151] mx-4"></div>
-                    <div className="text-right">
-                      <p className="text-xs text-[#3b82f6] font-bold mb-1">
+                    <div className="h-8 border-l border-[#374151] mx-2 sm:mx-4 shrink-0"></div>
+                    <div className="w-1/2 text-right">
+                      <p className="text-xs text-[#3b82f6] font-bold mb-1 truncate">
                         {modelB || "---"}
                       </p>
-                      <p className="text-3xl font-bold">
+                      <p className="text-2xl md:text-3xl font-bold">
                         {dataB?.totalReviewed || 0}
                       </p>
                     </div>
@@ -545,7 +555,7 @@ export default function AnalyticsPage() {
                 <CardHeader>
                   <CardTitle className="text-lg">Acurácia por Classe</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[350px]">
+                <CardContent className="h-[300px] md:h-[350px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={comparisonData}
@@ -603,21 +613,21 @@ export default function AnalyticsPage() {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center justify-between">
                     Equilíbrio do Modelo
-                    <Scale className="h-5 w-5 text-gray-500" />
+                    <Scale className="h-5 w-5 text-gray-500 shrink-0" />
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[350px]">
+                <CardContent className="h-[300px] md:h-[350px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <RadarChart
                       cx="50%"
                       cy="50%"
-                      outerRadius="70%"
+                      outerRadius="65%"
                       data={comparisonData}
                     >
                       <PolarGrid stroke="#374151" />
                       <PolarAngleAxis
                         dataKey="subject"
-                        tick={{ fill: "#9ca3af", fontSize: 12 }}
+                        tick={{ fill: "#9ca3af", fontSize: 11 }}
                         className="capitalize"
                       />
                       <PolarRadiusAxis
@@ -663,7 +673,7 @@ export default function AnalyticsPage() {
               <Card className="bg-[#1f1f1f] border-[#374151] text-white">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-[#16a34a]" />
+                    <TrendingUp className="h-5 w-5 text-[#16a34a] shrink-0" />
                     Evolução da Acurácia Global
                   </CardTitle>
                   <p className="text-sm text-gray-400 mt-1">
@@ -671,7 +681,7 @@ export default function AnalyticsPage() {
                     IA.
                   </p>
                 </CardHeader>
-                <CardContent className="h-[350px]">
+                <CardContent className="h-[300px] md:h-[350px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart
                       data={evolutionData}

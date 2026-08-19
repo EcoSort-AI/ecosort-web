@@ -22,7 +22,10 @@ export default async function handler(req, res) {
         ai_prediction as previsto, 
         COUNT(*)::int as count 
       FROM trash_detections 
-      WHERE ai_prediction IS NOT NULL AND item_class IS NOT NULL
+      WHERE ai_prediction IS NOT NULL 
+        AND item_class IS NOT NULL
+        AND reviewed_at IS NOT NULL
+        AND review_status IN ('approved', 'corrected')
     `;
     const values = [];
 
@@ -39,8 +42,10 @@ export default async function handler(req, res) {
     if (rows.length === 0) {
       return res.status(200).json({
         availableVersions,
-        globalAccuracy: 0,
+        globalAccuracy: null,
         totalReviewed: 0,
+        totalCorrect: 0,
+        totalIncorrect: 0,
         accuracyByClass: [],
         confusionMatrix: [],
       });
@@ -73,6 +78,8 @@ export default async function handler(req, res) {
       return { real, previsto, count };
     });
 
+    const totalIncorrect = totalReviewed - totalCorrect;
+
     const globalAccuracy =
       totalReviewed > 0
         ? Number(((totalCorrect / totalReviewed) * 100).toFixed(1))
@@ -80,12 +87,15 @@ export default async function handler(req, res) {
 
     const accuracyByClass = Object.keys(classStats).map((className) => {
       const stats = classStats[className];
+      const hasSamples = stats.total > 0;
       return {
         category: className,
-        accuracy:
-          stats.total > 0
-            ? Number(((stats.correct / stats.total) * 100).toFixed(1))
-            : 0,
+        correct: stats.correct,
+        total: stats.total,
+        accuracy: hasSamples
+          ? Number(((stats.correct / stats.total) * 100).toFixed(1))
+          : null,
+        hasSamples,
       };
     });
 
@@ -93,6 +103,8 @@ export default async function handler(req, res) {
       availableVersions,
       globalAccuracy,
       totalReviewed,
+      totalCorrect,
+      totalIncorrect,
       accuracyByClass,
       confusionMatrix,
     });

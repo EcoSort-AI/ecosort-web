@@ -6,6 +6,7 @@ import {
   ForbiddenError,
   ServiceError,
   UnauthorizedError,
+  ConcurrencyError,
 } from "infra/errors.js";
 import controller from "infra/controller.js";
 import database from "infra/database.js";
@@ -118,9 +119,9 @@ async function patchHandler(request, response) {
   }
 
   if (trashEvent.review_status !== "pending") {
-    return response.status(409).json({
-      name: "ConcurrencyError",
+    throw new ConcurrencyError({
       message: "Esta imagem já foi validada anteriormente.",
+      action: "A imagem não está mais disponível para revisão.",
     });
   }
 
@@ -181,9 +182,27 @@ async function patchHandler(request, response) {
   });
 
   if (updateResult.rowCount === 0) {
-    return response.status(409).json({
-      name: "ConcurrencyError",
+    try {
+      await s3Client.send(
+        new DeleteObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: newPath,
+        }),
+      );
+    } catch (cleanupError) {
+      console.error(
+        "[S3 Error] Falha ao limpar arquivo órfão após conflito de concorrência:",
+        {
+          detectionId: id,
+          objectKey: newPath,
+          errorMessage: cleanupError.message,
+        },
+      );
+    }
+
+    throw new ConcurrencyError({
       message: "Este item já foi revisado por outro usuário.",
+      action: "A imagem foi removida da sua fila. Continue para a próxima.",
     });
   }
 

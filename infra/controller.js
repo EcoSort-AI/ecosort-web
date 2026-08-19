@@ -18,7 +18,8 @@ function onErrorHandler(error, request, response) {
     error.name === "ValidationError" ||
     error.name === "NotFoundError" ||
     error.name === "ForbiddenError" ||
-    error.name === "ServiceError"
+    error.name === "ServiceError" ||
+    error.name === "ConcurrencyError"
   ) {
     return response.status(error.statusCode || 400).json(error);
   }

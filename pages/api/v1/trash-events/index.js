@@ -1,5 +1,7 @@
 import { createRouter } from "next-connect";
 import { z } from "zod";
+import crypto from "node:crypto";
+import database from "infra/database.js";
 import {
   ValidationError,
   UnauthorizedError,
@@ -95,7 +97,7 @@ async function postHandler(request, response) {
     });
   }
 
-  const deviceToken = authHeader.split(" ")[1];
+  const deviceToken = authHeader.split(" ")[1].trim();
 
   const trashEventSchema = z.object({
     bin_id: z.string({
@@ -130,7 +132,7 @@ async function postHandler(request, response) {
           {
             required_error: "O campo 'class_name' é obrigatório.",
             invalid_type_error:
-              "Classe de resíduo não reconhecida. Utilize as classes oficiais (ex: 'plastic', 'metal').",
+              "Classe de resíduo não reconhecida. Utilize as classes oficiais.",
           },
         ),
         confidence: z
@@ -157,8 +159,23 @@ async function postHandler(request, response) {
     });
   }
 
-  const expectedToken = `ecotoken_${validatedBody.bin_id}`;
-  if (deviceToken !== expectedToken) {
+  const tokenHash = crypto
+    .createHash("sha256")
+    .update(deviceToken)
+    .digest("hex");
+
+  console.log("[DEBUG SEGURANÇA] Token Limpo recebido:", deviceToken);
+  console.log("[DEBUG SEGURANÇA] Hash Calculado na API:", tokenHash);
+
+  const deviceCheck = await database.query({
+    text: "SELECT device_name FROM device_settings WHERE token_hash = $1",
+    values: [tokenHash],
+  });
+
+  if (
+    deviceCheck.rows.length === 0 ||
+    deviceCheck.rows[0].device_name !== validatedBody.bin_id
+  ) {
     throw new ForbiddenError({
       message: "Token revogado ou não pertence a esta lixeira.",
       action: "Verifique as credenciais configuradas no dispositivo.",

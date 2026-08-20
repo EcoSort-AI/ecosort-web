@@ -9,7 +9,7 @@ const router = createRouter();
 
 router.use(controller.injectAnonymousOrUser);
 
-router.get(getHandler);
+router.get(controller.canRequest("read:dashboard"), getHandler);
 
 router.patch(controller.canRequest("update:device_config"), patchHandler);
 router.post(controller.canRequest("create:device_config"), postHandler);
@@ -17,7 +17,7 @@ router.post(controller.canRequest("create:device_config"), postHandler);
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  const targetDevice = request.query.device || "smart-bin-01";
+  const targetDevice = request.query.device || "smart_bin_01";
 
   const deviceConfig = await deviceSetting.findOneByName(targetDevice);
 

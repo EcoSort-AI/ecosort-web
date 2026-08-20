@@ -1,16 +1,33 @@
 import orchestrator from "tests/orchestrator.js";
+import crypto from "node:crypto";
+import database from "infra/database.js";
+
+const TEST_BIN_ID = "smart_bin_01";
+const TEST_TOKEN = "eco_test_secret_token";
+const TEST_TOKEN_HASH = crypto
+  .createHash("sha256")
+  .update(TEST_TOKEN)
+  .digest("hex");
 
 beforeAll(async () => {
   await orchestrator.waitForAllServices();
   await orchestrator.clearDatabase();
   await orchestrator.runPendingMigrations();
+
+  await database.query({
+    text: `
+      INSERT INTO device_settings (device_name, confidence_threshold, classes_status, token_hash) 
+      VALUES ($1, 80, '{"plastico": true}'::jsonb, $2)
+    `,
+    values: [TEST_BIN_ID, TEST_TOKEN_HASH],
+  });
 });
 
 describe("POST to /api/v1/trash-events", () => {
   describe("Device Authentication (P0-04)", () => {
     test("Saving a new detection from the smart bin with valid token", async () => {
       const payload = {
-        bin_id: "smart_bin_01",
+        bin_id: TEST_BIN_ID,
         timestamp: "2026-03-19T15:01:52.939Z",
         detection: {
           class_name: "plastic",
@@ -25,7 +42,7 @@ describe("POST to /api/v1/trash-events", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Bearer ecotoken_smart_bin_01",
+            Authorization: `Bearer ${TEST_TOKEN}`,
           },
           body: JSON.stringify(payload),
         },
@@ -36,7 +53,7 @@ describe("POST to /api/v1/trash-events", () => {
       const responseBody = await response.json();
 
       expect(responseBody.id).toBeDefined();
-      expect(responseBody.bin_id).toBe("smart_bin_01");
+      expect(responseBody.bin_id).toBe(TEST_BIN_ID);
       expect(responseBody.item_class).toBe("plastic");
       expect(responseBody.confidence).toBeCloseTo(0.932);
       expect(responseBody.review_status).toBe("pending");
@@ -51,7 +68,7 @@ describe("POST to /api/v1/trash-events", () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            bin_id: "smart_bin_01",
+            bin_id: TEST_BIN_ID,
             timestamp: "2026-03-19T15:01:52.939Z",
             detection: { class_name: "plastic", confidence: 0.932 },
           }),
@@ -70,10 +87,10 @@ describe("POST to /api/v1/trash-events", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Bearer ecotoken_outra_lixeira",
+            Authorization: "Bearer token_falso_ou_invalido",
           },
           body: JSON.stringify({
-            bin_id: "smart_bin_01",
+            bin_id: TEST_BIN_ID,
             timestamp: "2026-03-19T15:01:52.939Z",
             detection: { class_name: "plastic", confidence: 0.932 },
           }),
@@ -92,7 +109,7 @@ describe("POST to /api/v1/trash-events", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: "Bearer ecotoken_smart_bin_quebrada",
+            Authorization: `Bearer ${TEST_TOKEN}`,
           },
           body: JSON.stringify({
             bin_id: "smart_bin_quebrada",

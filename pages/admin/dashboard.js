@@ -13,7 +13,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Separator } from "@/components/ui/separator";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -112,13 +111,9 @@ export default function AdminDashboard() {
     setIsMounted(true);
   }, []);
 
-  const { data: apiData, error } = useSWR(
-    "/api/v1/trash-events?limit=1000",
-    fetcher,
-    {
-      refreshInterval: 5000,
-    },
-  );
+  const { data: apiData, error } = useSWR("/api/v1/dashboard", fetcher, {
+    refreshInterval: 5000,
+  });
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -127,143 +122,45 @@ export default function AdminDashboard() {
   const dashboardData = useMemo(() => {
     if (!apiData) return null;
 
-    const rawData = Array.isArray(apiData) ? apiData : apiData.events || [];
-
-    if (rawData.length === 0) {
-      return {
-        kpis: {
-          totalDetections: 0,
-          averageConfidence: "0.0",
-          mostActiveBin: "Nenhuma",
-          topCategory: "Nenhum",
-          pendingReviews: 0,
-        },
-        volumeOverTime: [],
-        categories: [],
-        recentDetections: [],
-        activeBins: [
-          {
-            id: "smart_bin_01",
-            location: { lat: -23.6477, lng: -46.5742 },
-            local: "Instituto Mauá de Tecnologia",
-            totalDetections: 0,
-            avgConfidence: "0.0",
-            topCategory: "Nenhum",
-          },
-          {
-            id: "smart_bin_02",
-            location: { lat: -23.628, lng: -46.5802 },
-            local: "ParkShopping São Caetano",
-            totalDetections: 0,
-            avgConfidence: "0.0",
-            topCategory: "Nenhum",
-          },
-        ],
-      };
-    }
-
-    const totalDetections = apiData.total || rawData.length;
-    let totalConfidence = 0;
-    let pendingReviewsCount = 0;
-    const binCounts = {};
-    const categoryCounts = {};
-    const dateCounts = {};
-    const binDetailedMetrics = {};
-
-    rawData.forEach((item) => {
-      totalConfidence += item.confidence;
-
-      if (item.review_status === "pending" && item.image_path) {
-        pendingReviewsCount++;
-      }
-
-      binCounts[item.bin_id] = (binCounts[item.bin_id] || 0) + 1;
-      categoryCounts[item.item_class] =
-        (categoryCounts[item.item_class] || 0) + 1;
-
-      const formattedDate = new Date(item.detected_at).toLocaleDateString(
-        "en-US",
-        { day: "2-digit", month: "2-digit" },
-      );
-      dateCounts[formattedDate] = (dateCounts[formattedDate] || 0) + 1;
-
-      if (!binDetailedMetrics[item.bin_id]) {
-        binDetailedMetrics[item.bin_id] = {
-          total: 0,
-          confidenceSum: 0,
-          categories: {},
-        };
-      }
-      binDetailedMetrics[item.bin_id].total++;
-      binDetailedMetrics[item.bin_id].confidenceSum += item.confidence;
-      binDetailedMetrics[item.bin_id].categories[item.item_class] =
-        (binDetailedMetrics[item.bin_id].categories[item.item_class] || 0) + 1;
-    });
-
-    const activeBinsWithMetrics = [
-      {
-        id: "smart_bin_01",
-        location: { lat: -23.6477, lng: -46.5742 },
-        local: "Instituto Mauá de Tecnologia",
-      },
-      {
-        id: "smart_bin_02",
-        location: { lat: -23.628, lng: -46.5802 },
-        local: "ParkShopping São Caetano",
-      },
-    ].map((bin) => {
-      const metrics = binDetailedMetrics[bin.id] || {
-        total: 0,
-        confidenceSum: 0,
-        categories: {},
-      };
-      const avgConf =
-        metrics.total > 0
-          ? ((metrics.confidenceSum / metrics.total) * 100).toFixed(1)
-          : "0.0";
-      const topCat =
-        Object.keys(metrics.categories).length > 0
-          ? Object.keys(metrics.categories).reduce((a, b) =>
-              metrics.categories[a] > metrics.categories[b] ? a : b,
-            )
-          : "Nenhum";
-      return {
-        ...bin,
-        totalDetections: metrics.total,
-        avgConfidence: avgConf,
-        topCategory: topCat === "Nenhum" ? "Nenhum" : translateMaterial(topCat),
-      };
-    });
-
     return {
+      ...apiData,
       kpis: {
-        totalDetections,
-        averageConfidence: ((totalConfidence / totalDetections) * 100).toFixed(
-          1,
-        ),
-        mostActiveBin: Object.keys(binCounts).reduce((a, b) =>
-          binCounts[a] > binCounts[b] ? a : b,
-        ),
-        topCategory: translateMaterial(
-          Object.keys(categoryCounts).reduce((a, b) =>
-            categoryCounts[a] > categoryCounts[b] ? a : b,
-          ),
-        ),
-        pendingReviews: pendingReviewsCount,
+        ...apiData.kpis,
+        topCategory:
+          apiData.kpis.topCategory && apiData.kpis.topCategory !== "Nenhum"
+            ? translateMaterial(apiData.kpis.topCategory)
+            : "Nenhum",
       },
-      volumeOverTime: Object.keys(dateCounts)
-        .map((k) => ({ date: k, detections: dateCounts[k] }))
-        .sort((a, b) => a.date.localeCompare(b.date)),
-      categories: Object.keys(categoryCounts)
-        .map((k) => ({
-          category: translateMaterial(k),
-          count: categoryCounts[k],
-        }))
-        .sort((a, b) => b.count - a.count),
-      recentDetections: [...rawData]
-        .sort((a, b) => new Date(b.detected_at) - new Date(a.detected_at))
-        .slice(0, 5),
-      activeBins: activeBinsWithMetrics,
+      categories: (apiData.categories || []).map((c) => ({
+        category: translateMaterial(c.category),
+        count: c.count,
+      })),
+      activeBins: [
+        {
+          id: "smart_bin_01",
+          location: { lat: -23.6477, lng: -46.5742 },
+          local: "Instituto Mauá de Tecnologia",
+        },
+        {
+          id: "smart_bin_02",
+          location: { lat: -23.628, lng: -46.5802 },
+          local: "ParkShopping São Caetano",
+        },
+      ].map((bin) => {
+        const metrics = (apiData.binMetrics || []).find(
+          (m) => m.bin_id === bin.id,
+        ) || { total: 0, avg_confidence: 0, top_category: "Nenhum" };
+
+        return {
+          ...bin,
+          totalDetections: metrics.total || 0,
+          avgConfidence: ((metrics.avg_confidence || 0) * 100).toFixed(1),
+          topCategory:
+            metrics.top_category && metrics.top_category !== "Nenhum"
+              ? translateMaterial(metrics.top_category)
+              : "Nenhum",
+        };
+      }),
     };
   }, [apiData]);
 
@@ -279,7 +176,7 @@ export default function AdminDashboard() {
   if (!dashboardData)
     return (
       <div className="p-8 text-gray-400 min-h-screen bg-[#242424]">
-        Carregando telemetria em tempo real...
+        Carregando telemetria agregada em tempo real...
       </div>
     );
 
@@ -306,7 +203,6 @@ export default function AdminDashboard() {
             </Breadcrumb>
           </div>
 
-          {/* Logout Button */}
           <button
             onClick={handleLogout}
             className="ml-auto flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gray-300 bg-[#242424] border border-[#374151] rounded-md hover:bg-[#374151] hover:text-white transition-colors"
@@ -326,7 +222,6 @@ export default function AdminDashboard() {
             </h2>
           </div>
 
-          {/* Stats Row */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 mb-4">
             <Card
               onClick={() => router.push("/admin/review")}
@@ -402,7 +297,6 @@ export default function AdminDashboard() {
             ))}
           </div>
 
-          {/* Charts */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mb-4">
             <Card className="col-span-4 bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader>
@@ -488,7 +382,6 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* Footer Info */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader>
@@ -634,7 +527,11 @@ export default function AdminDashboard() {
                           <p className="text-xs text-gray-400">
                             {item.bin_id} • Confiança:{" "}
                             <span
-                              className={`font-semibold ${Number(item.confidence) > 0.85 ? "text-green-400" : "text-yellow-400"}`}
+                              className={`font-semibold ${
+                                Number(item.confidence) > 0.85
+                                  ? "text-green-400"
+                                  : "text-yellow-400"
+                              }`}
                             >
                               {(item.confidence * 100).toFixed(0)}%
                             </span>

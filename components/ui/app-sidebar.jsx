@@ -45,7 +45,7 @@ export function AppSidebar() {
   const router = useRouter();
 
   const { data } = useSWR(
-    "/api/v1/trash-events?status=pending&has_image=true",
+    "/api/v1/trash-events?status=pending&hasImage=true",
     fetcher,
     {
       refreshInterval: 5000,

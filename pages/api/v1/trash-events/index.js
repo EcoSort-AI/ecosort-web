@@ -164,9 +164,6 @@ async function postHandler(request, response) {
     .update(deviceToken)
     .digest("hex");
 
-  console.log("[DEBUG SEGURANÇA] Token Limpo recebido:", deviceToken);
-  console.log("[DEBUG SEGURANÇA] Hash Calculado na API:", tokenHash);
-
   const deviceCheck = await database.query({
     text: "SELECT device_name FROM device_settings WHERE token_hash = $1",
     values: [tokenHash],

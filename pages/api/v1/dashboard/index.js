@@ -13,7 +13,9 @@ router.get(
 export default router.handler(controller.errorHandlers);
 
 async function getHandler(request, response) {
-  const metrics = await dashboard.getMetrics();
+  const { days } = request.query;
+
+  const metrics = await dashboard.getMetrics({ days });
 
   return response.status(200).json(metrics);
 }

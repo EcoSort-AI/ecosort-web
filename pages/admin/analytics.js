@@ -27,7 +27,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Cell,
   Legend,
   Radar,
   RadarChart,
@@ -46,6 +45,9 @@ import {
   GitCompare,
   Scale,
   Layers,
+  Info,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 
 const fetcher = (url) => fetch(url).then((res) => res.json());
@@ -55,9 +57,11 @@ export default function AnalyticsPage() {
   const router = useRouter();
 
   const [selectedVersion, setSelectedVersion] = useState("all");
-
   const [modelA, setModelA] = useState("");
   const [modelB, setModelB] = useState("");
+
+  // Estado para controlar a visibilidade da caixa de informações
+  const [showMetricsInfo, setShowMetricsInfo] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -65,9 +69,7 @@ export default function AnalyticsPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/v1/sessions", {
-        method: "DELETE",
-      });
+      await fetch("/api/v1/sessions", { method: "DELETE" });
     } catch (error) {
       console.error("Erro ao encerrar sessão:", error);
     } finally {
@@ -78,9 +80,7 @@ export default function AnalyticsPage() {
   const { data: apiData, error } = useSWR(
     `/api/v1/analytics?version=${selectedVersion}`,
     fetcher,
-    {
-      refreshInterval: 10000,
-    },
+    { refreshInterval: 10000 },
   );
 
   const analyticsData = useMemo(() => {
@@ -88,7 +88,7 @@ export default function AnalyticsPage() {
       return {
         globalAccuracy: 0,
         totalReviewed: 0,
-        accuracyByClass: [],
+        metricsByClass: [],
         confusionMatrix: [],
         uniqueClasses: [],
         chartData: [],
@@ -103,12 +103,14 @@ export default function AnalyticsPage() {
     });
     const uniqueClasses = Array.from(classesSet).sort();
 
-    const chartData = apiData.accuracyByClass
+    const chartData = (apiData.metricsByClass || [])
       .map((item) => ({
         category: translateMaterial(item.category),
-        accuracy: item.hasSamples ? item.accuracy : null,
+        precision: item.hasSamples ? item.precision : null,
+        recall: item.hasSamples ? item.recall : null,
+        f1Score: item.hasSamples ? item.f1Score : null,
       }))
-      .sort((a, b) => (b.accuracy || 0) - (a.accuracy || 0));
+      .sort((a, b) => (b.f1Score || 0) - (a.f1Score || 0));
 
     return {
       ...apiData,
@@ -123,11 +125,7 @@ export default function AnalyticsPage() {
       const sortedVersions = [...analyticsData.availableVersions].sort((a, b) =>
         a.localeCompare(b),
       );
-
-      if (!modelA) {
-        setModelA(sortedVersions[0]);
-      }
-
+      if (!modelA) setModelA(sortedVersions[0]);
       if (!modelB) {
         setModelB(
           sortedVersions.length > 1
@@ -151,23 +149,23 @@ export default function AnalyticsPage() {
   );
 
   const comparisonData = useMemo(() => {
-    if (!dataA?.accuracyByClass || !dataB?.accuracyByClass) return [];
+    if (!dataA?.metricsByClass || !dataB?.metricsByClass) return [];
 
-    const categoriesA = dataA.accuracyByClass.map((c) => c.category);
-    const categoriesB = dataB.accuracyByClass.map((c) => c.category);
+    const categoriesA = dataA.metricsByClass.map((c) => c.category);
+    const categoriesB = dataB.metricsByClass.map((c) => c.category);
     const allUniqueCategories = Array.from(
       new Set([...categoriesA, ...categoriesB]),
     );
 
     return allUniqueCategories.map((cat) => {
-      const matchA = dataA.accuracyByClass.find((c) => c.category === cat);
-      const matchB = dataB.accuracyByClass.find((c) => c.category === cat);
+      const matchA = dataA.metricsByClass.find((c) => c.category === cat);
+      const matchB = dataB.metricsByClass.find((c) => c.category === cat);
 
       return {
         subject: translateMaterial(cat),
         category: translateMaterial(cat),
-        [modelA]: matchA && matchA.hasSamples ? matchA.accuracy : null,
-        [modelB]: matchB && matchB.hasSamples ? matchB.accuracy : null,
+        [modelA]: matchA && matchA.hasSamples ? matchA.f1Score : null,
+        [modelB]: matchB && matchB.hasSamples ? matchB.f1Score : null,
       };
     });
   }, [dataA, dataB, modelA, modelB]);
@@ -178,7 +176,6 @@ export default function AnalyticsPage() {
       analyticsData.availableVersions.length === 0
     )
       return [];
-
     const sortedVersions = [...analyticsData.availableVersions].sort((a, b) =>
       a.localeCompare(b),
     );
@@ -189,7 +186,6 @@ export default function AnalyticsPage() {
           return { version, accuracy: dataA.globalAccuracy };
         if (version === modelB && dataB && dataB.globalAccuracy !== null)
           return { version, accuracy: dataB.globalAccuracy };
-
         return null;
       })
       .filter(Boolean);
@@ -201,7 +197,6 @@ export default function AnalyticsPage() {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="bg-[#242424]">
-        {/* Header */}
         <header
           className="flex h-16 shrink-0 items-center gap-2 border-b border-[#374151] px-4 bg-[#1f1f1f] text-white"
           style={{ fontFamily: "sans-serif" }}
@@ -302,10 +297,60 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
+          {/* Caixa Expansível de Explicação das Métricas */}
+          <div className="mb-6 bg-[#1e3a8a]/10 border border-[#1e3a8a]/50 rounded-lg text-sm text-blue-200 overflow-hidden transition-all duration-300">
+            <button
+              onClick={() => setShowMetricsInfo(!showMetricsInfo)}
+              className="w-full flex items-center justify-between p-4 bg-[#1e3a8a]/20 hover:bg-[#1e3a8a]/30 transition-colors focus:outline-none"
+            >
+              <div className="flex items-center gap-2 font-bold text-blue-400 text-base">
+                <Info size={18} className="shrink-0" />
+                Entendendo as Métricas de Machine Learning
+              </div>
+              {showMetricsInfo ? (
+                <ChevronUp size={20} className="text-blue-400 shrink-0" />
+              ) : (
+                <ChevronDown size={20} className="text-blue-400 shrink-0" />
+              )}
+            </button>
+
+            {showMetricsInfo && (
+              <div className="p-4 md:p-5 border-t border-[#1e3a8a]/30">
+                <ul className="list-disc list-inside space-y-3 ml-1 text-gray-300 leading-relaxed">
+                  <li>
+                    <strong className="text-white">
+                      Precisão (Risco de Contaminação):
+                    </strong>{" "}
+                    Mede a qualidade das predições. De todos os itens que a IA
+                    classificou como "Plástico", qual a porcentagem que
+                    realmente era? Uma precisão baixa significa que a IA está
+                    misturando resíduos errados no cesto.
+                  </li>
+                  <li>
+                    <strong className="text-white">
+                      Recall (Risco de Desperdício):
+                    </strong>{" "}
+                    Mede a capacidade de detecção. De todo o "Plástico" real que
+                    passou pela lixeira, qual a porcentagem que a IA conseguiu
+                    identificar? Um recall baixo significa que material
+                    reciclável está sendo ignorado.
+                  </li>
+                  <li>
+                    <strong className="text-white">F1-Score:</strong> É a média
+                    harmônica entre a Precisão e o Recall. Representa o
+                    equilíbrio perfeito do modelo, sendo a métrica definitiva
+                    para comparar o desempenho real da IA em cada categoria de
+                    resíduo.
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
+
           <div className="grid gap-6 md:grid-cols-1 xl:grid-cols-2 mb-12">
             <Card className="bg-[#1f1f1f] border-[#374151] text-white">
               <CardHeader>
-                <CardTitle>Acurácia por Classe</CardTitle>
+                <CardTitle>Precisão e Recall por Classe</CardTitle>
               </CardHeader>
               <CardContent className="h-[300px] md:h-[400px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -345,19 +390,37 @@ export default function AnalyticsPage() {
                         fontWeight: "bold",
                         marginBottom: "4px",
                       }}
-                      itemStyle={{
-                        color: "#e5e7eb",
+                      itemStyle={{ color: "#e5e7eb" }}
+                      formatter={(value, name) => {
+                        const label =
+                          name === "precision"
+                            ? "Precisão"
+                            : name === "recall"
+                              ? "Recall"
+                              : "F1-Score";
+                        return [`${value}%`, label];
                       }}
-                      formatter={(value) => [`${value}%`, "Acurácia"]}
                     />
-                    <Bar dataKey="accuracy" radius={[4, 4, 0, 0]}>
-                      {analyticsData.chartData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={entry.accuracy > 85 ? "#16a34a" : "#eab308"}
-                        />
-                      ))}
-                    </Bar>
+                    <Legend
+                      wrapperStyle={{ paddingTop: "20px" }}
+                      formatter={(value) =>
+                        value === "precision"
+                          ? "Precisão (Contaminação)"
+                          : "Recall (Desperdício)"
+                      }
+                    />
+                    <Bar
+                      dataKey="precision"
+                      name="precision"
+                      fill="#3b82f6"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="recall"
+                      name="recall"
+                      fill="#eab308"
+                      radius={[4, 4, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -461,11 +524,9 @@ export default function AnalyticsPage() {
                     ))}
                   </select>
                 </div>
-
                 <span className="hidden sm:block text-gray-500 font-black">
                   X
                 </span>
-
                 <div className="flex items-center justify-between w-full sm:w-auto gap-2">
                   <span className="text-sm font-medium text-[#3b82f6] whitespace-nowrap">
                     Modelo B:
@@ -485,7 +546,6 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            {/* Comparison KPIs */}
             <div className="grid gap-4 md:grid-cols-2 mb-6">
               <Card className="bg-[#1f1f1f] border-[#374151] text-white">
                 <CardHeader className="pb-2">
@@ -553,66 +613,8 @@ export default function AnalyticsPage() {
             <div className="grid gap-6 md:grid-cols-2">
               <Card className="bg-[#1f1f1f] border-[#374151] text-white">
                 <CardHeader>
-                  <CardTitle className="text-lg">Acurácia por Classe</CardTitle>
-                </CardHeader>
-                <CardContent className="h-[300px] md:h-[350px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={comparisonData}
-                      margin={{ top: 20, right: 10, left: -20, bottom: 5 }}
-                    >
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="#374151"
-                        vertical={false}
-                      />
-                      <XAxis
-                        dataKey="category"
-                        stroke="#9ca3af"
-                        tickLine={false}
-                        axisLine={false}
-                        className="capitalize"
-                        tick={{ fontSize: 12 }}
-                      />
-                      <YAxis
-                        stroke="#9ca3af"
-                        tickLine={false}
-                        axisLine={false}
-                        domain={[0, 100]}
-                        tickFormatter={(val) => `${val}%`}
-                      />
-                      <Tooltip
-                        cursor={{ fill: "#2a2a2a" }}
-                        contentStyle={{
-                          backgroundColor: "#1f1f1f",
-                          borderColor: "#374151",
-                          color: "#fff",
-                          borderRadius: "6px",
-                        }}
-                        formatter={(value) => [`${value}%`, "Acurácia"]}
-                      />
-                      <Legend wrapperStyle={{ paddingTop: "20px" }} />
-                      <Bar
-                        dataKey={modelA}
-                        name={`Modelo A (${modelA})`}
-                        fill="#16a34a"
-                        radius={[4, 4, 0, 0]}
-                      />
-                      <Bar
-                        dataKey={modelB}
-                        name={`Modelo B (${modelB})`}
-                        fill="#3b82f6"
-                        radius={[4, 4, 0, 0]}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-[#1f1f1f] border-[#374151] text-white">
-                <CardHeader>
                   <CardTitle className="text-lg flex items-center justify-between">
-                    Equilíbrio do Modelo
+                    Equilíbrio (F1-Score por Classe)
                     <Scale className="h-5 w-5 text-gray-500 shrink-0" />
                   </CardTitle>
                 </CardHeader>
@@ -643,10 +645,9 @@ export default function AnalyticsPage() {
                           color: "#fff",
                           borderRadius: "6px",
                         }}
-                        formatter={(value) => [`${value}%`, "Acurácia"]}
+                        formatter={(value) => [`${value}%`, "F1-Score"]}
                       />
                       <Legend wrapperStyle={{ paddingTop: "20px" }} />
-
                       <Radar
                         name={`Modelo B (${modelB})`}
                         dataKey={modelB}
@@ -654,7 +655,6 @@ export default function AnalyticsPage() {
                         fill="#3b82f6"
                         fillOpacity={0.25}
                       />
-
                       <Radar
                         name={`Modelo A (${modelA})`}
                         dataKey={modelA}
@@ -666,93 +666,93 @@ export default function AnalyticsPage() {
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
-            </div>
 
-            {/* Evolution Chart */}
-            <div className="mt-6">
-              <Card className="bg-[#1f1f1f] border-[#374151] text-white">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5 text-[#16a34a] shrink-0" />
-                    Evolução da Acurácia Global
-                  </CardTitle>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Acompanhe o impacto do retreinamento na performance geral da
-                    IA.
-                  </p>
-                </CardHeader>
-                <CardContent className="h-[300px] md:h-[350px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart
-                      data={evolutionData}
-                      margin={{ top: 20, right: 30, left: -20, bottom: 5 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="colorAccuracy"
-                          x1="0"
-                          y1="0"
-                          x2="0"
-                          y2="1"
-                        >
-                          <stop
-                            offset="5%"
-                            stopColor="#16a34a"
-                            stopOpacity={0.3}
-                          />
-                          <stop
-                            offset="95%"
-                            stopColor="#16a34a"
-                            stopOpacity={0}
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        strokeDasharray="3 3"
-                        stroke="#374151"
-                        vertical={false}
-                      />
-                      <XAxis
-                        dataKey="version"
-                        stroke="#9ca3af"
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fontSize: 12, fontWeight: "bold" }}
-                      />
-                      <YAxis
-                        stroke="#9ca3af"
-                        tickLine={false}
-                        axisLine={false}
-                        domain={["dataMin - 10", 100]}
-                        tickFormatter={(val) => `${val.toFixed(0)}%`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#1f1f1f",
-                          borderColor: "#374151",
-                          color: "#fff",
-                          borderRadius: "6px",
-                        }}
-                        formatter={(value) => [`${value}%`, "Acurácia"]}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="accuracy"
-                        stroke="#16a34a"
-                        strokeWidth={4}
-                        fillOpacity={1}
-                        fill="url(#colorAccuracy)"
-                        activeDot={{
-                          r: 6,
-                          fill: "#16a34a",
-                          stroke: "#fff",
-                          strokeWidth: 2,
-                        }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+              {/* Evolution Chart */}
+              <div className="mt-0">
+                <Card className="bg-[#1f1f1f] border-[#374151] text-white h-full">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-[#16a34a] shrink-0" />
+                      Evolução da Acurácia Global
+                    </CardTitle>
+                    <p className="text-sm text-gray-400 mt-1">
+                      Acompanhe o impacto do retreinamento na performance geral
+                      da IA.
+                    </p>
+                  </CardHeader>
+                  <CardContent className="h-[250px] md:h-[280px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={evolutionData}
+                        margin={{ top: 20, right: 30, left: -20, bottom: 5 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="colorAccuracy"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="5%"
+                              stopColor="#16a34a"
+                              stopOpacity={0.3}
+                            />
+                            <stop
+                              offset="95%"
+                              stopColor="#16a34a"
+                              stopOpacity={0}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="#374151"
+                          vertical={false}
+                        />
+                        <XAxis
+                          dataKey="version"
+                          stroke="#9ca3af"
+                          tickLine={false}
+                          axisLine={false}
+                          tick={{ fontSize: 12, fontWeight: "bold" }}
+                        />
+                        <YAxis
+                          stroke="#9ca3af"
+                          tickLine={false}
+                          axisLine={false}
+                          domain={["dataMin - 10", 100]}
+                          tickFormatter={(val) => `${val.toFixed(0)}%`}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#1f1f1f",
+                            borderColor: "#374151",
+                            color: "#fff",
+                            borderRadius: "6px",
+                          }}
+                          formatter={(value) => [`${value}%`, "Acurácia"]}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="accuracy"
+                          stroke="#16a34a"
+                          strokeWidth={4}
+                          fillOpacity={1}
+                          fill="url(#colorAccuracy)"
+                          activeDot={{
+                            r: 6,
+                            fill: "#16a34a",
+                            stroke: "#fff",
+                            strokeWidth: 2,
+                          }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>
@@ -763,29 +763,16 @@ export default function AnalyticsPage() {
 
 export async function getServerSideProps(context) {
   const sessionToken = context.req.cookies.session_id;
-
-  if (!sessionToken) {
-    return {
-      redirect: { destination: "/login", permanent: false },
-    };
-  }
+  if (!sessionToken)
+    return { redirect: { destination: "/login", permanent: false } };
 
   try {
     const sessionObject = await session.findOneValidByToken(sessionToken);
     const userObject = await user.findOneById(sessionObject.user_id);
-
-    if (!authorization.can(userObject, "read:dashboard")) {
-      return {
-        redirect: { destination: "/", permanent: false },
-      };
-    }
-
-    return {
-      props: {},
-    };
+    if (!authorization.can(userObject, "read:dashboard"))
+      return { redirect: { destination: "/", permanent: false } };
+    return { props: {} };
   } catch (error) {
-    return {
-      redirect: { destination: "/login", permanent: false },
-    };
+    return { redirect: { destination: "/login", permanent: false } };
   }
 }

@@ -46,56 +46,80 @@ export default async function handler(req, res) {
         totalReviewed: 0,
         totalCorrect: 0,
         totalIncorrect: 0,
-        accuracyByClass: [],
+        metricsByClass: [],
         confusionMatrix: [],
       });
     }
 
     let totalReviewed = 0;
     let totalCorrect = 0;
-    const classStats = {};
+    const classMetrics = {};
+
+    rows.forEach((row) => {
+      if (!classMetrics[row.real])
+        classMetrics[row.real] = {
+          truePositives: 0,
+          actualTotal: 0,
+          predictedTotal: 0,
+        };
+      if (!classMetrics[row.previsto])
+        classMetrics[row.previsto] = {
+          truePositives: 0,
+          actualTotal: 0,
+          predictedTotal: 0,
+        };
+    });
 
     const confusionMatrix = rows.map((row) => {
-      const real = row.real || "desconhecido";
-      const previsto = row.previsto || "desconhecido";
+      const real = row.real;
+      const previsto = row.previsto;
       const count = parseInt(row.count, 10);
 
       totalReviewed += count;
 
       if (real === previsto) {
         totalCorrect += count;
+        classMetrics[real].truePositives += count;
       }
 
-      if (!classStats[real]) {
-        classStats[real] = { total: 0, correct: 0 };
-      }
-      classStats[real].total += count;
-
-      if (real === previsto) {
-        classStats[real].correct += count;
-      }
+      classMetrics[real].actualTotal += count; // Recall Denominator (FN + TP)
+      classMetrics[previsto].predictedTotal += count; // Precision Denominator (FP + TP)
 
       return { real, previsto, count };
     });
 
     const totalIncorrect = totalReviewed - totalCorrect;
-
     const globalAccuracy =
       totalReviewed > 0
         ? Number(((totalCorrect / totalReviewed) * 100).toFixed(1))
         : 0;
 
-    const accuracyByClass = Object.keys(classStats).map((className) => {
-      const stats = classStats[className];
-      const hasSamples = stats.total > 0;
+    const metricsByClass = Object.keys(classMetrics).map((className) => {
+      const stats = classMetrics[className];
+
+      const precision =
+        stats.predictedTotal > 0
+          ? (stats.truePositives / stats.predictedTotal) * 100
+          : 0;
+      const recall =
+        stats.actualTotal > 0
+          ? (stats.truePositives / stats.actualTotal) * 100
+          : 0;
+
+      // F1-Score
+      const f1Score =
+        precision + recall > 0
+          ? 2 * ((precision * recall) / (precision + recall))
+          : 0;
+
       return {
         category: className,
-        correct: stats.correct,
-        total: stats.total,
-        accuracy: hasSamples
-          ? Number(((stats.correct / stats.total) * 100).toFixed(1))
-          : null,
-        hasSamples,
+        precision: Number(precision.toFixed(1)),
+        recall: Number(recall.toFixed(1)),
+        f1Score: Number(f1Score.toFixed(1)),
+        actualTotal: stats.actualTotal,
+        predictedTotal: stats.predictedTotal,
+        hasSamples: stats.actualTotal > 0 || stats.predictedTotal > 0,
       };
     });
 
@@ -105,7 +129,7 @@ export default async function handler(req, res) {
       totalReviewed,
       totalCorrect,
       totalIncorrect,
-      accuracyByClass,
+      metricsByClass,
       confusionMatrix,
     });
   } catch (error) {

@@ -92,6 +92,7 @@ const mapOptions = {
 export default function AdminDashboard() {
   const [isMounted, setIsMounted] = useState(false);
   const [selectedMapBin, setSelectedMapBin] = useState(null);
+  const [period, setPeriod] = useState("all");
 
   const router = useRouter();
 
@@ -111,9 +112,13 @@ export default function AdminDashboard() {
     setIsMounted(true);
   }, []);
 
-  const { data: apiData, error } = useSWR("/api/v1/dashboard", fetcher, {
-    refreshInterval: 5000,
-  });
+  const { data: apiData, error } = useSWR(
+    `/api/v1/dashboard?days=${period}`,
+    fetcher,
+    {
+      refreshInterval: 5000,
+    },
+  );
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
@@ -299,8 +304,18 @@ export default function AdminDashboard() {
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7 mb-4">
             <Card className="col-span-4 bg-[#1f1f1f] border-[#374151] text-white">
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle>Volume de Descarte</CardTitle>
+                <select
+                  value={period}
+                  onChange={(e) => setPeriod(e.target.value)}
+                  className="bg-[#242424] text-white border border-[#374151] rounded-md px-2 py-1 text-sm outline-none focus:border-[#16a34a]"
+                >
+                  <option value="all">Todo o período</option>
+                  <option value="30">Últimos 30 dias</option>
+                  <option value="60">Últimos 60 dias</option>
+                  <option value="90">Últimos 90 dias</option>
+                </select>
               </CardHeader>
               <CardContent className="h-[350px]">
                 <ResponsiveContainer width="100%" height="100%">

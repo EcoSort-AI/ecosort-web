@@ -1,6 +1,22 @@
 import database from "infra/database.js";
 
-async function getMetrics() {
+async function getMetrics({ days } = {}) {
+  let volumeQueryText = `
+    SELECT TO_CHAR(detected_at, 'MM/DD') as date, COUNT(*)::int as detections
+    FROM trash_detections
+  `;
+  const volumeQueryValues = [];
+
+  if (days && days !== "all") {
+    volumeQueryText += ` WHERE detected_at >= NOW() - $1::interval`;
+    volumeQueryValues.push(`${parseInt(days, 10)} days`);
+  }
+
+  volumeQueryText += `
+    GROUP BY TO_CHAR(detected_at, 'MM/DD'), DATE(detected_at)
+    ORDER BY DATE(detected_at) ASC;
+  `;
+
   const [
     kpisResult,
     topBinResult,
@@ -30,13 +46,8 @@ async function getMetrics() {
       GROUP BY item_class ORDER BY count DESC LIMIT 1;
     `),
 
-    database.query(`
-      SELECT TO_CHAR(detected_at, 'MM/DD') as date, COUNT(*)::int as detections
-      FROM trash_detections
-      WHERE detected_at >= NOW() - INTERVAL '30 days'
-      GROUP BY TO_CHAR(detected_at, 'MM/DD'), DATE(detected_at)
-      ORDER BY DATE(detected_at) ASC;
-    `),
+    // dynamic query
+    database.query({ text: volumeQueryText, values: volumeQueryValues }),
 
     database.query(`
       SELECT item_class as category, COUNT(*)::int as count

@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Head from "next/head";
 import Image from "next/image";
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { translateMaterial } from "@/lib/dictionary";
 
 import {
@@ -129,6 +130,7 @@ export default function Home({ isLoggedIn }) {
         minHeight: "100vh",
         paddingBottom: "50px",
       }}
+      className="relative text-white overflow-x-hidden selection:bg-[#16a34a] selection:text-white"
     >
       <Head>
         <title>EcoSort - A Lixeira Inteligente</title>
@@ -137,6 +139,12 @@ export default function Home({ isLoggedIn }) {
         `}</style>
       </Head>
 
+      {/* Efeito de Luz de Fundo (Ambient Glow) idêntico ao da página "sobre" */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#16a34a] rounded-full mix-blend-screen filter blur-[140px] opacity-15" />
+        <div className="absolute top-1/2 -right-40 w-96 h-96 bg-[#eab308] rounded-full mix-blend-screen filter blur-[160px] opacity-10" />
+      </div>
+
       <header
         style={{
           display: "flex",
@@ -144,6 +152,7 @@ export default function Home({ isLoggedIn }) {
           alignItems: "center",
           padding: "20px 40px",
         }}
+        className="relative z-10 bg-[#242424]/80 backdrop-blur-md sticky top-0 border-b border-white/5"
       >
         <div style={{ display: "flex", alignItems: "center" }}>
           <Image
@@ -167,9 +176,13 @@ export default function Home({ isLoggedIn }) {
 
       <main
         style={{ maxWidth: "1100px", margin: "0 auto", padding: "40px 20px" }}
+        className="relative z-10"
       >
-        {/* Upper Section */}
-        <section
+        {/* Upper Section com animação de subida suave (Fade-in Up) */}
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
           style={{
             display: "flex",
             flexWrap: "wrap",
@@ -203,20 +216,23 @@ export default function Home({ isLoggedIn }) {
               Utilizando Inteligência Artificial e Visão Computacional para
               classificar os resíduos em tempo real.
             </p>
-            <button
-              style={{
-                backgroundColor: "#16a34a",
-                color: "#fff",
-                border: "none",
-                padding: "15px 30px",
-                fontSize: "1em",
-                borderRadius: "30px",
-                cursor: "pointer",
-                fontWeight: "bold",
-              }}
-            >
-              Conhecer o EcoSort
-            </button>
+            <Link href="/about" style={{ textDecoration: "none" }}>
+              <button
+                style={{
+                  backgroundColor: "#16a34a",
+                  color: "#fff",
+                  border: "none",
+                  padding: "15px 30px",
+                  fontSize: "1em",
+                  borderRadius: "30px",
+                  cursor: "pointer",
+                  fontWeight: "bold",
+                }}
+                className="hover:bg-[#15803d] transition-colors shadow-lg shadow-[#16a34a]/20"
+              >
+                Conhecer o EcoSort
+              </button>
+            </Link>
           </div>
 
           <div
@@ -240,10 +256,13 @@ export default function Home({ isLoggedIn }) {
               }}
             />
           </div>
-        </section>
+        </motion.section>
 
-        {/* Card Counter */}
-        <section
+        {/* Card Counter com animação de subida */}
+        <motion.section
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
           style={{
             display: "flex",
             justifyContent: "center",
@@ -284,7 +303,7 @@ export default function Home({ isLoggedIn }) {
               {!countData && !countError ? "..." : totalItems}
             </p>
           </div>
-        </section>
+        </motion.section>
 
         {/* SECTION: Concentric Chart + Horizontal Bars */}
         <section
